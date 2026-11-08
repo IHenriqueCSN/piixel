@@ -186,7 +186,7 @@ class MainWindow(QMainWindow):
         event.accept()
 
 
-def main(argv=None):
+def main(argv=None, *, startup=None):
     parser = argparse.ArgumentParser(description="Piixel — ferramentas do Piixelverso")
     parser.add_argument("design", nargs="?", help="Arquivo .pii para abrir diretamente no Ateliê")
     args = parser.parse_args(argv)
@@ -197,6 +197,8 @@ def main(argv=None):
     app.setStyleSheet(STYLE)
     app.setFont(QFont("DejaVu Sans", 10))
     window = MainWindow()
+    if startup is not None:
+        startup.finish(window)
     window.show()
     if args.design:
         QTimer.singleShot(0, lambda: window.open_design_path(args.design))

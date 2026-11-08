@@ -2,6 +2,10 @@
 
 Piixel é um aplicativo desktop do Piixelverso, organizado em módulos. Ele abre em uma tela inicial com acesso ao **Ateliê**, o único módulo disponível nesta versão. O Ateliê permite desenhar pixel art e saber quantas peças de cada cor serão necessárias. A interface usa Python e Qt (PySide6), e os designs ficam em arquivos locais `.pii`.
 
+Ao iniciar, uma pequena tela com o Pii mostra **Carregando…**, uma barra de atividade animada e **Desenvolvido por Piixelverso**. Ela abre antes de carregar o editor e fecha automaticamente assim que a janela principal aparece, sem uma espera mínima. A animação continua funcionando durante a inicialização.
+
+![Tela de carregamento do Piixel](docs/previa-carregamento.png)
+
 ## Tela inicial
 
 ![Tela inicial do Piixel com o módulo Ateliê](docs/previa-inicio.png)
@@ -48,7 +52,7 @@ Extraia o ZIP e abra a pasta `piixel-main`. O pacote contém o código-fonte e o
 
 Instale **Python 3.11 ou superior** pelo [site oficial](https://www.python.org/downloads/) e habilite a opção de adicionar Python ao `PATH`.
 
-Com todos os arquivos do projeto na mesma pasta, abra `iniciar-windows.bat`. Na primeira execução, ele cria o ambiente `.venv` e instala os componentes Qt; essa etapa precisa de internet. Nas próximas execuções, o aplicativo funciona localmente.
+Com todos os arquivos do projeto na mesma pasta, abra `iniciar-windows.bat`. Na primeira execução, ele cria o ambiente `.venv` e instala os componentes Qt; essa etapa precisa de internet e ocorre antes de a tela de carregamento estar disponível. Nas próximas execuções, o aplicativo funciona localmente e exibe o carregamento logo no início.
 
 Também é possível iniciar pelo terminal, dentro da pasta do projeto:
 
@@ -75,6 +79,8 @@ python3 -m venv .venv
 ```
 
 O aplicativo precisa de uma sessão gráfica. No Linux, o Qt depende também das bibliotecas gráficas da distribuição. Se aparecer um erro de plataforma Qt ou `xcb`, confira a biblioteca citada na mensagem e instale o pacote correspondente pelo gerenciador do sistema.
+
+Na primeira instalação pelo iniciador, a criação do ambiente e a instalação dos componentes Qt acontecem antes da tela de carregamento. Com os componentes já instalados, o iniciador evita carregar o Qt duas vezes e mostra a tela antes da inicialização da janela principal. O tempo até a primeira imagem depende da inicialização do Python, do Qt e do sistema gráfico.
 
 ## Usar o editor
 
@@ -185,6 +191,8 @@ Esta etapa gera o aplicativo para distribuição local. Assinatura digital, nota
 
 - `piixelverso/`: aplicativo, grade, contagem, modelo e leitura/gravação `.pii`.
 - `piixelverso/app.py`: janela do Piixel e navegação, mantendo os módulos abertos durante a sessão.
+- `piixelverso/startup.py`: entrada leve e encerramento do carregamento na abertura da janela principal.
+- `piixelverso/splash.py`: tela de carregamento com animação independente da inicialização do editor.
 - `piixelverso/modules.py`: cadastro dos módulos disponíveis; nesta versão, somente o Ateliê.
 - `piixelverso/home.py`: tela inicial.
 - `piixelverso/atelier.py`: módulo Ateliê, com desenho, histórico, contagem e salvamento.
