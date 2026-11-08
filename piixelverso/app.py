@@ -18,7 +18,7 @@ from .canvas import PixelCanvas
 from .counts import ColorCountsView
 from .format import DesignFormatError, load_design, save_design
 from .model import PixelDesign, validate_name
-from .ribbon import EditorRibbon
+from .commands import EditorCommandBar
 
 
 PALETTE = [
@@ -224,7 +224,7 @@ class MainWindow(QMainWindow):
         self._counts_timer.timeout.connect(self.refresh_counts)
         self._create_actions()
         self._build()
-        self._connect_ribbon()
+        self._connect_command_bar()
         self.history.indexChanged.connect(self._history_changed)
         self.refresh_design()
         self.select_color("#E7794B")
@@ -239,11 +239,11 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         topbar = QFrame(objectName="topbar")
-        topbar.setFixedHeight(52)
+        topbar.setFixedHeight(44)
         top = QHBoxLayout(topbar)
         top.setContentsMargins(28, 0, 28, 0)
         logo = QLabel()
-        logo.setPixmap(icon("brand").pixmap(38, 38))
+        logo.setPixmap(icon("brand").pixmap(32, 32))
         top.addWidget(logo)
         top.addWidget(label("piixelverso", "brand"))
         top.addSpacing(16)
@@ -254,21 +254,20 @@ class MainWindow(QMainWindow):
         top.addWidget(badge)
         layout.addWidget(topbar)
 
-        self.ribbon = EditorRibbon(self.command_actions)
-        layout.addWidget(self.ribbon)
-        self.tool_buttons = {key: self.ribbon.buttons[key] for key in ("pencil", "eraser", "picker")}
-        self.undo_button = self.ribbon.buttons["undo"]
-        self.redo_button = self.ribbon.buttons["redo"]
-        self.display_mode_combo = self.ribbon.display_mode_combo
-        self.zoom = self.ribbon.zoom_slider
-        self.zoom_label = self.ribbon.zoom_label
+        self.command_bar = EditorCommandBar(self.command_actions)
+        layout.addWidget(self.command_bar)
+        self.tool_buttons = {key: self.command_bar.buttons[key] for key in ("pencil", "eraser", "picker")}
+        self.undo_button = self.command_bar.buttons["undo"]
+        self.redo_button = self.command_bar.buttons["redo"]
+        self.display_mode_combo = self.command_bar.display_mode_combo
+        self.zoom = self.command_bar.zoom_slider
+        self.zoom_label = self.command_bar.zoom_label
 
         project_bar = QWidget(objectName="projectBar")
         project = QHBoxLayout(project_bar)
-        project.setContentsMargins(28, 12, 28, 12)
+        project.setContentsMargins(28, 8, 28, 8)
         title = QVBoxLayout()
         title.setSpacing(3)
-        title.addWidget(label("SEU ESPAÇO DE CRIAÇÃO", "eyebrow"))
         self.name_edit = QLineEdit(self.design.name)
         self.name_edit.setObjectName("designName")
         self.name_edit.setMaxLength(4096)
@@ -423,7 +422,7 @@ class MainWindow(QMainWindow):
         return pane
 
     def _create_actions(self):
-        """One QAction per command powers both the ribbon and global shortcuts."""
+        """One QAction per command powers menus, toolbar and global shortcuts."""
         standard = QKeySequence.StandardKey
         specs = [
             ("new", "Novo", "plus", self.new_design, standard.New),
@@ -464,9 +463,9 @@ class MainWindow(QMainWindow):
             self.addAction(action)
         self.command_actions["pencil"].setChecked(True)
 
-    def _connect_ribbon(self):
+    def _connect_command_bar(self):
         self.display_mode_combo.currentIndexChanged.connect(self.change_display_mode)
-        self.ribbon.grid_checkbox.toggled.connect(self.toggle_grid)
+        self.command_bar.grid_checkbox.toggled.connect(self.toggle_grid)
         self.zoom.valueChanged.connect(self.set_zoom)
 
     def select_tool(self, tool):

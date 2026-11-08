@@ -10,7 +10,7 @@ Primeira versão de um aplicativo desktop nativo para desenhar pixel art e saber
 - Contagem por cor e total de peças; espaços vazios não entram na contagem.
 - Desfazer, refazer e zoom da grade.
 - Exibição em quadradinhos ou em rosquinhas estilo hama beads.
-- Ribbon com abas Arquivo, Início e Exibir, comandos agrupados e atalhos de teclado.
+- Menus Arquivo, Editar e Exibir e uma única linha compacta de ferramentas, com atalhos de teclado.
 - Salvamento e leitura no formato binário `.pii`, preservando dimensões, nome e cores.
 
 A contagem é a base para controlar materiais e calcular preços. Esta versão ainda não mantém um cadastro de estoque, custos, margens ou preços de venda.
@@ -58,7 +58,7 @@ O aplicativo precisa de uma sessão gráfica. No Linux, o Qt depende também das
 ## Usar o editor
 
 1. Em **Arquivo → Novo**, crie um design e escolha a largura e a altura da grade.
-2. Selecione uma cor na paleta ou use **Início → Cor personalizada**.
+2. Selecione uma cor na paleta ou use **Editar → Cor personalizada**.
 3. Clique e arraste sobre os quadradinhos para desenhar. Use a borracha para remover peças.
 4. Consulte a contagem por cor e o total de peças enquanto desenha.
 5. Use **Arquivo → Salvar** para gravar o design `.pii` e **Arquivo → Abrir** para continuar depois.
@@ -71,15 +71,15 @@ Em **Exibir → Peças**, alterne entre **Quadradinhos** e **Rosquinhas (hama be
 
 Clique no nome para renomear o design. A lista de cores à direita também permite selecionar uma cor já usada. Abra `examples/cogumelo-do-bosque.pii` para experimentar o editor com um desenho pronto.
 
-## Ribbon e atalhos
+## Menus e atalhos
 
-A faixa de opções no topo reúne os comandos em três abas:
+A barra compacta no topo reúne menus tradicionais e ícones das ferramentas mais usadas. Os menus abrem somente quando acionados, deixando mais espaço para a prancheta:
 
 - **Arquivo**: novo design, abrir, salvar e salvar como.
-- **Início**: desfazer/refazer, lápis, borracha, conta-gotas e cor personalizada.
+- **Editar**: desfazer/refazer, lápis, borracha, conta-gotas e cor personalizada.
 - **Exibir**: formato das peças, grade, zoom e ajustar à janela.
 
-Os atalhos aparecem abaixo dos comandos e nas dicas ao passar o mouse. Funcionam mesmo quando a aba do comando está fechada. No Windows e Linux:
+Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto você desenha, sem precisar abrir os menus. No Windows e Linux:
 
 | Comando | Atalho |
 | --- | --- |
@@ -92,11 +92,11 @@ Os atalhos aparecem abaixo dos comandos e nas dicas ao passar o mouse. Funcionam
 | Lápis | B |
 | Borracha | E |
 | Conta-gotas | I |
-| Aba Arquivo | Alt+A |
-| Aba Início | Alt+I |
-| Aba Exibir | Alt+X |
+| Menu Arquivo | Alt+A |
+| Menu Editar | Alt+E |
+| Menu Exibir | Alt+X |
 
-O botão direito apaga sem trocar de ferramenta. Ao editar o nome do design, as letras são digitadas normalmente. No macOS, os comandos usam os atalhos nativos indicados na faixa de opções.
+O botão direito apaga sem trocar de ferramenta. Ao editar o nome do design, as letras são digitadas normalmente. No macOS, os comandos usam os atalhos nativos indicados nos menus.
 
 ## Arquivos `.pii`
 
