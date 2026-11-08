@@ -1,8 +1,8 @@
 """Native pixel canvas with continuous strokes and one undo step per gesture."""
 from __future__ import annotations
 
-from PySide6.QtCore import QPoint, QRect, Qt, Signal
-from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPen
+from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, Qt, Signal
+from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPainterPath, QPen, QRadialGradient
 from PySide6.QtWidgets import QWidget
 
 from .model import PixelDesign
@@ -22,6 +22,7 @@ class PixelCanvas(QWidget):
         self.color = "#E7794B"
         self.tool = "pencil"
         self.show_grid = True
+        self.display_mode = "squares"
         self._before: dict[int, str | None] = {}
         self._drawing = False
         self._erase = False
@@ -48,6 +49,38 @@ class PixelCanvas(QWidget):
         self.cell_size = max(4, round(16 * percent / 100))
         self._resize()
 
+    def set_display_mode(self, mode: str):
+        """Change only the preview; every cell still represents one piece."""
+        if mode not in ("squares", "beads"):
+            raise ValueError("O modo de exibição deve ser 'squares' ou 'beads'.")
+        if mode != self.display_mode:
+            self.display_mode = mode
+            self.update()
+
+    @staticmethod
+    def _paint_bead(painter: QPainter, left: int, top: int, size: int, color: str):
+        outer = QRectF(left + size * 0.06, top + size * 0.06,
+                       size * 0.88, size * 0.88)
+        hole_size = max(2.4, size * 0.36)
+        hole_offset = (size - hole_size) / 2
+        hole = QRectF(left + hole_offset, top + hole_offset,
+                      hole_size, hole_size)
+        ring = QPainterPath()
+        ring.setFillRule(Qt.FillRule.OddEvenFill)
+        ring.addEllipse(outer)
+        outer_outline = QPainterPath(ring)
+        ring.addEllipse(hole)
+
+        base = QColor(color)
+        gradient = QRadialGradient(QPointF(left + size * 0.35, top + size * 0.28),
+                                   size * 0.76)
+        gradient.setColorAt(0, base.lighter(108))
+        gradient.setColorAt(0.55, base)
+        gradient.setColorAt(1, base.darker(108))
+        outline = QColor("#CFD5CE") if base.lightness() > 235 else base.darker(115)
+        painter.fillPath(ring, gradient)
+        painter.strokePath(outer_outline, QPen(outline, max(0.4, min(0.8, size * 0.03))))
+
     def cell_at(self, point: QPoint):
         x = (point.x() - self.MARGIN) // self.cell_size
         y = (point.y() - self.MARGIN) // self.cell_size
@@ -61,12 +94,18 @@ class PixelCanvas(QWidget):
         painter = QPainter(self)
         m, size = self.MARGIN, self.cell_size
         width, height = self.design.width, self.design.height
+        beads = self.display_mode == "beads"
         painter.setPen(Qt.PenStyle.NoPen)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, beads)
         for y in range(height):
             for x in range(width):
                 color = self.design.pixels[y * width + x]
+                background = "#FFFFFF" if (x + y) % 2 == 0 else "#F0F2F1"
                 painter.fillRect(m + x * size, m + y * size, size, size,
-                                 QColor(color or ("#FFFFFF" if (x + y) % 2 == 0 else "#F0F2F1")))
+                                 QColor(background if beads else color or background))
+                if beads and color is not None:
+                    self._paint_bead(painter, m + x * size, m + y * size, size, color)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         if self.show_grid and size >= 7:
             painter.setPen(QPen(QColor("#D5DDD9"), 1))
             for x in range(width + 1):

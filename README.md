@@ -9,6 +9,7 @@ Primeira versão de um aplicativo desktop nativo para desenhar pixel art e saber
 - Paleta inicial e seleção de cores personalizadas.
 - Contagem por cor e total de peças; espaços vazios não entram na contagem.
 - Desfazer, refazer e zoom da grade.
+- Exibição em quadradinhos ou em rosquinhas estilo hama beads.
 - Salvamento e leitura no formato binário `.pii`, preservando dimensões, nome e cores.
 
 A contagem é a base para controlar materiais e calcular preços. Esta versão ainda não mantém um cadastro de estoque, custos, margens ou preços de venda.
@@ -62,6 +63,10 @@ O aplicativo precisa de uma sessão gráfica. No Linux, o Qt depende também das
 5. Salve o design com a extensão `.pii` e use **Abrir** para continuar depois.
 
 O branco é uma cor e conta como peça quando aplicado. Um quadradinho vazio é transparente e não conta como peça.
+
+No seletor acima da prancheta, alterne entre **Quadradinhos** e **Rosquinhas (hama beads)**. As rosquinhas têm um furo central e continuam permitindo desenhar, apagar e capturar cores em toda a célula. Essa opção muda apenas a exibição: as cores, as quantidades e os arquivos `.pii` são os mesmos. A escolha vale durante a sessão e continua ativa ao abrir ou criar outro design.
+
+![Visualização em rosquinhas estilo hama beads](docs/previa-rosquinhas.png)
 
 Clique no nome para renomear o design. A lista de cores à direita também permite selecionar uma cor já usada. Abra `examples/cogumelo-do-bosque.pii` para experimentar o editor com um desenho pronto.
 

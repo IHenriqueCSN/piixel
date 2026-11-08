@@ -8,7 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap, QUndoCommand, QUndoStack
 from PySide6.QtWidgets import (
-    QApplication, QButtonGroup, QCheckBox, QColorDialog, QDialog,
+    QApplication, QButtonGroup, QCheckBox, QColorDialog, QComboBox, QDialog,
     QDialogButtonBox, QFileDialog, QFormLayout, QFrame, QGridLayout,
     QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMessageBox,
     QPushButton, QScrollArea, QSlider, QSpinBox, QVBoxLayout, QWidget,
@@ -71,6 +71,8 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 QSlider::groove:horizontal { background: #DCE5D9; height: 4px; border-radius: 2px; }
 QSlider::handle:horizontal { background: #285B49; width: 12px; margin: -4px 0; border-radius: 6px; }
 QCheckBox { color: #718078; font-size: 11px; spacing: 6px; }
+QComboBox { border: 1px solid #DCE3DC; border-radius: 6px; padding: 6px 10px; background: #F8FAF5; }
+QComboBox:hover { border-color: #ADBDB0; }
 QLineEdit, QSpinBox { border: 1px solid #D0DACE; border-radius: 6px; padding: 8px; background: white; }
 QDialog { background: #F8FAF5; }
 QToolTip { background: #293C37; color: white; padding: 6px; border: 0; }
@@ -352,6 +354,16 @@ class MainWindow(QMainWindow):
         toolbar.addSpacing(8)
         toolbar.addWidget(self.dimensions)
         toolbar.addStretch()
+        self.display_mode_combo = QComboBox()
+        self.display_mode_combo.setObjectName("displayMode")
+        self.display_mode_combo.setAccessibleName("Exibição das peças")
+        self.display_mode_combo.setToolTip("Escolha como as peças aparecem na prancheta")
+        self.display_mode_combo.addItem("Quadradinhos", "squares")
+        self.display_mode_combo.addItem("Rosquinhas (hama beads)", "beads")
+        self.display_mode_combo.setMinimumWidth(200)
+        self.display_mode_combo.currentIndexChanged.connect(self.change_display_mode)
+        toolbar.addWidget(self.display_mode_combo)
+        toolbar.addSpacing(8)
         self.undo_button = button("", self.undo, "iconButton", "undo")
         self.undo_button.setToolTip("Desfazer (Ctrl+Z)")
         self.undo_button.setAccessibleName("Desfazer")
@@ -484,6 +496,10 @@ class MainWindow(QMainWindow):
     def toggle_grid(self, checked):
         self.canvas.show_grid = checked
         self.canvas.update()
+
+    def change_display_mode(self, index):
+        self.canvas.finish_stroke()
+        self.canvas.set_display_mode(self.display_mode_combo.itemData(index))
 
     def set_zoom(self, percent):
         self.canvas.set_zoom(percent)
