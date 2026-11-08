@@ -70,13 +70,13 @@ class HomeNavigationTests(unittest.TestCase):
         QTest.keyClick(widget, key, modifiers)
         self.app.processEvents()
 
-    def test_startup_shows_only_atelier_without_constructing_it(self):
+    def test_startup_lists_available_modules_without_constructing_them(self):
         self.assertIsNone(self.window.current_module)
         self.assertIs(self.window.pages.currentWidget(), self.window.home_page)
         self.assertTrue(self.window.home_page.isVisible())
         self.assertEqual(self.window.module_pages, {})
-        self.assertEqual(set(self.window.home_page.module_buttons), {"atelier"})
-        self.assertEqual({definition.id for definition in MODULES}, {"atelier"})
+        self.assertEqual(set(self.window.home_page.module_buttons), {"atelier", "settings"})
+        self.assertEqual({definition.id for definition in MODULES}, {"atelier", "settings"})
         self.assertIn("Piixel", self.window.windowTitle())
         self.assertIn("Início", self.window.windowTitle())
 

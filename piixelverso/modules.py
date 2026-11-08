@@ -17,4 +17,10 @@ MODULES = (
         description="Crie pixel arts, visualize em hama beads e acompanhe as peças por cor.",
         icon_name="pencil",
     ),
+    ModuleDefinition(
+        id="settings",
+        title="Configurações",
+        description="Defina o tamanho de cada peça para as medidas das imagens exportadas.",
+        icon_name="settings",
+    ),
 )

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QFont, QKeySequence
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStackedWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStackedWidget, QWidget
 
 from .atelier import AtelierModule, icon
 from .brand import app_icon, ensure_fonts
@@ -16,6 +16,7 @@ from .modules import MODULES
 from .format import DesignFormatError, load_design
 from .model import PixelDesign
 from .preferences import PreferencesError, PreferencesStore
+from .settings import SettingsModule
 from .theme import APP_STYLE, apply_palette
 from .thumbnails import thumbnail_png
 
@@ -37,10 +38,10 @@ class MainWindow(QMainWindow):
         self._refreshing_recent_files = False
         self._recent_error_reported = False
         self.current_module: str | None = None
-        self.module_pages: dict[str, AtelierModule] = {}
+        self.module_pages: dict[str, QWidget] = {}
         self._opened_modules: set[str] = set()
         self._definitions = {module.id: module for module in MODULES}
-        self._factories = {"atelier": AtelierModule}
+        self._factories = {"atelier": AtelierModule, "settings": SettingsModule}
 
         self.pages = QStackedWidget()
         self.pages.setObjectName("applicationPages")
@@ -59,11 +60,17 @@ class MainWindow(QMainWindow):
         self.home_action.setToolTip("Voltar à tela inicial (Alt+Home)")
         self.home_action.triggered.connect(self.show_home)
         self.addAction(self.home_action)
+        self.settings_action = QAction(icon("settings"), "Configurações", self)
+        self.settings_action.setShortcut(QKeySequence("Ctrl+,"))
+        self.settings_action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+        self.settings_action.setToolTip("Abrir Configurações (Ctrl+,)")
+        self.settings_action.triggered.connect(lambda: self.open_module("settings"))
+        self.addAction(self.settings_action)
         self.show_home()
         if self.preferences.load_error:
             QTimer.singleShot(0, self._show_preferences_load_error)
 
-    def _get_module(self, module_id: str) -> AtelierModule:
+    def _get_module(self, module_id: str) -> QWidget:
         if module_id not in self._definitions or module_id not in self._factories:
             raise ValueError(f"Módulo desconhecido: {module_id}")
         if module_id not in self.module_pages:
@@ -72,27 +79,30 @@ class MainWindow(QMainWindow):
             self.pages.addWidget(module)
             self.module_pages[module_id] = module
             module.home_requested.connect(self.show_home)
-            module.document_accessed.connect(self._record_recent_file)
+            if isinstance(module, AtelierModule):
+                module.document_accessed.connect(self._record_recent_file)
+                file_menu = module.command_bar.menus["file"]
+                file_menu.addSeparator()
+                file_menu.addAction(self.home_action)
+                file_menu.addAction(self.settings_action)
             module.windowTitleChanged.connect(
                 lambda _title, key=module_id: self._sync_module_state(key)
             )
             module.home_button.setToolTip("Voltar à tela inicial (Alt+Home)")
-            file_menu = module.command_bar.menus["file"]
-            file_menu.addSeparator()
-            file_menu.addAction(self.home_action)
         return self.module_pages[module_id]
 
     def _sync_module_state(self, module_id: str):
         if module_id not in self._opened_modules:
             return
         module = self.module_pages[module_id]
-        self.home_page.set_module_state(
-            module_id, module.design.name, not module.history.isClean()
-        )
+        if isinstance(module, AtelierModule):
+            self.home_page.set_module_state(
+                module_id, module.design.name, not module.history.isClean()
+            )
         if self.current_module == module_id:
             self.setWindowTitle(module.windowTitle())
 
-    def open_module(self, module_id: str) -> AtelierModule:
+    def open_module(self, module_id: str) -> QWidget:
         module = self._get_module(module_id)
         if self.current_module and self.current_module != module_id:
             previous = self.module_pages[self.current_module]
@@ -103,13 +113,18 @@ class MainWindow(QMainWindow):
         self.pages.setCurrentWidget(module)
         module.set_active(True)
         self.home_action.setEnabled(True)
+        self.settings_action.setEnabled(module_id != "settings")
         self._sync_module_state(module_id)
         QTimer.singleShot(0, lambda: self._focus_module_if_current(module_id))
         return module
 
     def _focus_module_if_current(self, module_id: str):
         if self.current_module == module_id:
-            self.module_pages[module_id].canvas.setFocus()
+            module = self.module_pages[module_id]
+            if isinstance(module, AtelierModule):
+                module.canvas.setFocus()
+            else:
+                module.focus_default()
 
     def show_home(self):
         if self.current_module:
@@ -121,6 +136,7 @@ class MainWindow(QMainWindow):
         self.current_module = None
         self.pages.setCurrentWidget(self.home_page)
         self.home_action.setEnabled(False)
+        self.settings_action.setEnabled(True)
         self.setWindowTitle("Piixel — Início")
         self.refresh_recent_files()
         QTimer.singleShot(0, self._focus_home_if_current)

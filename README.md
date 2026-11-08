@@ -1,6 +1,6 @@
 # Piixel · ferramentas do Piixelverso
 
-Piixel é um aplicativo desktop do Piixelverso, organizado em módulos. Ele abre em uma tela inicial com acesso ao **Ateliê**, o único módulo disponível nesta versão. O Ateliê permite desenhar pixel art e saber quantas peças de cada cor serão necessárias. A interface usa Python e Qt (PySide6), e os designs ficam em arquivos locais `.pii`.
+Piixel é um aplicativo desktop do Piixelverso, organizado em módulos. A tela inicial oferece o **Ateliê**, para criar pixel arts e contar as peças por cor, e **Configurações**, para definir o tamanho de cada peça nas imagens exportadas. A interface usa Python e Qt (PySide6), e os designs ficam em arquivos locais `.pii`.
 
 Ao iniciar, uma pequena tela com o Pii mostra **Carregando…**, uma barra de atividade animada e **Desenvolvido por Piixelverso**. Ela abre antes de carregar o editor e fecha automaticamente assim que a janela principal aparece, sem uma espera mínima. A animação continua funcionando durante a inicialização.
 
@@ -8,7 +8,7 @@ Ao iniciar, uma pequena tela com o Pii mostra **Carregando…**, uma barra de at
 
 ## Tela inicial
 
-![Tela inicial do Piixel com o módulo Ateliê](docs/previa-inicio.png)
+![Tela inicial do Piixel com Ateliê e Configurações](docs/previa-inicio.png)
 
 Escolha **Abrir Ateliê** para entrar no editor. Dentro dele, use **← Início**, **Arquivo → Tela inicial** ou **Alt+Home** para voltar. Ao retornar à tela inicial, o desenho, o arquivo aberto, o histórico, as cores e a visualização ficam preservados durante a sessão. Use **Continuar no Ateliê** para retomar.
 
@@ -29,6 +29,8 @@ Se o arquivo tiver sido movido ou apagado, a miniatura e o caminho anteriores pe
 - Exibição em quadradinhos ou em rosquinhas estilo hama beads.
 - Menus Arquivo, Editar e Exibir e uma única linha compacta de ferramentas, com atalhos de teclado.
 - Salvamento e leitura no formato binário `.pii`, preservando dimensões, nome e cores.
+- Exportação de PNG em quadradinhos ou rosquinhas, com grade opcional e medidas em milímetros.
+- Configuração persistente do tamanho de cada peça, com padrão de 5 mm.
 
 A contagem é a base para controlar materiais e calcular preços. Esta versão ainda não mantém um cadastro de estoque, custos, margens ou preços de venda.
 
@@ -106,6 +108,26 @@ Em **Exibir → Peças**, alterne entre **Quadradinhos** e **Rosquinhas (hama be
 
 Clique no nome para renomear o design. A lista de cores à direita também permite selecionar uma cor já usada. Abra `examples/cogumelo-do-bosque.pii` para experimentar o editor com um desenho pronto.
 
+## Exportar como PNG
+
+No Ateliê, use **Arquivo → Exportar como PNG…** ou **Ctrl+Shift+E**. Escolha **Quadradinhos** ou **Rosquinhas (hama beads)** e marque **Mostrar grade** se quiser incluir as linhas. A prévia mostra o resultado antes de gravar a imagem; essas escolhas valem para a exportação e preservam a visualização atual do editor.
+
+![Escolha da aparência e prévia do PNG com medidas](docs/previa-exportar-png.png)
+
+O PNG tem fundo branco e inclui setas de duas pontas e textos pretos: a largura fica acima do desenho e a altura à esquerda. As medidas consideram toda a grade, inclusive células vazias. Com o padrão de **5 mm por peça**, uma grade de **32 × 32** mede **160 × 160 mm**.
+
+Clique em **Escolher onde salvar…** para selecionar a pasta e o nome do PNG. O arquivo registra também a densidade correspondente ao tamanho configurado da peça. Exportar mantém o caminho do design, o histórico e o estado de salvamento do `.pii`. Para continuar editando o trabalho em outra sessão, salve também o design pelo comando **Salvar**.
+
+![Exemplo de PNG exportado com grade e cotas](docs/exemplo-exportado.png)
+
+## Configurações
+
+Abra **Configurações** na tela inicial, por **Arquivo → Configurações** no Ateliê ou com **Ctrl+,**. Em **Lado da peça**, informe o tamanho em milímetros e clique em **Salvar configurações**. O valor padrão é **5 mm**, como uma peça hama beads; são aceitos valores de **0,1 a 100 mm**, com até duas casas decimais.
+
+![Módulo Configurações com tamanho da peça em milímetros](docs/previa-configuracoes.png)
+
+A configuração permanece entre sessões e é usada nas próximas exportações de PNG. Ela fica nas preferências locais do usuário. Voltar ao Ateliê preserva o desenho, as cores, o histórico e o arquivo aberto.
+
 ## Cores personalizadas
 
 Em **Editar → Cor personalizada**, informe um hexadecimal `#RRGGBB` ou use **Escolher cor**. Ao confirmar **Adicionar cor**, ela aparece na paleta e fica disponível durante a sessão, inclusive ao voltar ao início e retornar ao Ateliê.
@@ -116,13 +138,13 @@ Em **Editar → Cor personalizada**, informe um hexadecimal `#RRGGBB` ou use **E
 
 O botão direito sobre uma cor permite salvá-la, editar sua opção salva ou **Remover das cores salvas**. Remover essa opção mantém a cor disponível na sessão atual. Salvar um desenho `.pii` preserva as cores usadas nele, mas não transforma automaticamente suas cores em favoritas da paleta.
 
-A lista de recentes e as cores que você escolheu guardar ficam nas preferências locais do usuário, separadas dos arquivos `.pii`.
+A lista de recentes, as cores que você escolheu guardar e o tamanho configurado das peças ficam nas preferências locais do usuário, separadas dos arquivos `.pii`.
 
 ## Menus e atalhos
 
 A barra compacta no topo reúne menus tradicionais e ícones das ferramentas mais usadas. Os menus abrem somente quando acionados, deixando mais espaço para a prancheta:
 
-- **Arquivo**: novo design, abrir, salvar e salvar como.
+- **Arquivo**: novo design, abrir, salvar, salvar como, exportar PNG, tela inicial e Configurações.
 - **Editar**: desfazer/refazer, lápis, balde de tinta, borracha, conta-gotas, substituir cor e cor personalizada.
 - **Exibir**: formato das peças, grade, zoom e ajustar à janela.
 
@@ -134,6 +156,8 @@ Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto 
 | Abrir `.pii` | Ctrl+O |
 | Salvar | Ctrl+S |
 | Salvar como | Ctrl+Shift+S |
+| Exportar como PNG | Ctrl+Shift+E |
+| Abrir Configurações | Ctrl+, |
 | Desfazer | Ctrl+Z |
 | Refazer | Ctrl+Y ou Ctrl+Shift+Z |
 | Lápis | B |
@@ -170,7 +194,7 @@ Dentro do ambiente virtual do projeto:
 python -m unittest discover -s tests
 ```
 
-`unittest` faz parte do Python. Os testes de interface usam QtTest e executam em modo offscreen. A validação cobre desenho contínuo, preenchimento por área, substituição global de cor, contagem, histórico, salvar/reabrir, falhas de gravação, arquivos inválidos e uma paleta com 16.384 cores.
+`unittest` faz parte do Python. Os testes de interface usam QtTest e executam em modo offscreen. A validação cobre desenho contínuo, preenchimento por área, substituição global de cor, contagem, histórico, salvar/reabrir, PNG com cotas, configurações persistentes, falhas de gravação, arquivos inválidos e uma paleta com 16.384 cores.
 
 ## Gerar um aplicativo para distribuição
 
@@ -193,7 +217,7 @@ Esta etapa gera o aplicativo para distribuição local. Assinatura digital, nota
 - `piixelverso/app.py`: janela do Piixel e navegação, mantendo os módulos abertos durante a sessão.
 - `piixelverso/startup.py`: entrada leve e encerramento do carregamento na abertura da janela principal.
 - `piixelverso/splash.py`: tela de carregamento com animação independente da inicialização do editor.
-- `piixelverso/modules.py`: cadastro dos módulos disponíveis; nesta versão, somente o Ateliê.
+- `piixelverso/modules.py`: cadastro dos módulos disponíveis: Ateliê e Configurações.
 - `piixelverso/home.py`: tela inicial.
 - `piixelverso/atelier.py`: módulo Ateliê, com desenho, histórico, contagem e salvamento.
 - `piixelverso/preferences.py`: preferências locais, arquivos recentes e cores salvas por escolha do usuário.
@@ -201,6 +225,9 @@ Esta etapa gera o aplicativo para distribuição local. Assinatura digital, nota
 - `piixelverso/colors.py`: diálogo de cores personalizadas e opção de persistência.
 - `piixelverso/operations.py`: cálculo dos preenchimentos e substituições sem alterar o desenho original.
 - `piixelverso/replace.py`: escolha e prévia da substituição de cor.
+- `piixelverso/png_export.py`: desenho e gravação atômica do PNG com medidas.
+- `piixelverso/export_dialog.py`: escolha da aparência e prévia da imagem exportada.
+- `piixelverso/settings.py`: módulo de configuração do tamanho das peças.
 - `tests/`: verificações do editor e do formato.
 - `run_piixelverso.py`: entrada usada no empacotamento.
 - `scripts/build.py`: geração do aplicativo pelo PyInstaller.

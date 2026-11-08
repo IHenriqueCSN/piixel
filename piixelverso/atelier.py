@@ -19,6 +19,8 @@ from .format import DesignFormatError, load_design, save_design
 from .model import PixelDesign, normalize_color, validate_name
 from .operations import replace_color_changes
 from .replace import ReplaceColorDialog
+from .export_dialog import ExportPngDialog
+from .png_export import save_png
 from .colors import CustomColorDialog
 from .preferences import PreferencesError, PreferencesStore
 from .commands import EditorCommandBar
@@ -93,6 +95,17 @@ def icon(kind: str, color=INK) -> QIcon:
     elif kind == "fit":
         for x, y, sx, sy in [(4, 4, 1, 1), (20, 4, -1, 1), (4, 20, 1, -1), (20, 20, -1, -1)]:
             p.drawLine(x, y, x + 5 * sx, y); p.drawLine(x, y, x, y + 5 * sy)
+    elif kind == "settings":
+        p.drawEllipse(6, 6, 12, 12); p.drawEllipse(10, 10, 4, 4)
+        for x, y, ex, ey in [(12, 3, 12, 6), (12, 18, 12, 21), (3, 12, 6, 12),
+                             (18, 12, 21, 12), (5, 5, 8, 8), (16, 16, 19, 19),
+                             (5, 19, 8, 16), (16, 8, 19, 5)]:
+            p.drawLine(x, y, ex, ey)
+    elif kind == "export_png":
+        p.drawRoundedRect(3, 4, 18, 15, 2, 2)
+        p.drawEllipse(6, 7, 3, 3)
+        p.drawLine(4, 17, 10, 11); p.drawLine(10, 11, 14, 15)
+        p.drawLine(14, 15, 17, 12); p.drawLine(17, 12, 20, 15)
     p.end()
     return QIcon(pixmap)
 
@@ -435,6 +448,7 @@ class AtelierModule(QWidget):
             ("open", "Abrir", "folder", self.open_design, standard.Open),
             ("save", "Salvar", "save", self.save, standard.Save),
             ("save_as", "Salvar como", "save_as", self.save_as, standard.SaveAs),
+            ("export_png", "Exportar como PNG…", "export_png", self.export_png, "Ctrl+Shift+E"),
             ("undo", "Desfazer", "undo", self.undo, standard.Undo),
             ("redo", "Refazer", "redo", self.redo, standard.Redo),
             ("pencil", "Lápis", "pencil", lambda: self.select_tool("pencil"), "B"),
@@ -796,6 +810,64 @@ class AtelierModule(QWidget):
                 if reply != QMessageBox.StandardButton.Yes:
                     return False
         return self._save_path(target)
+
+    def export_png(self):
+        self.rename_design()
+        self.canvas.finish_stroke()
+        try:
+            dialog = ExportPngDialog(
+                self.design, piece_size_mm=self.preferences.piece_size_mm(),
+                display_mode=self.canvas.display_mode, show_grid=self.canvas.show_grid,
+                parent=self.window(),
+            )
+        except (ValueError, RuntimeError) as error:
+            QMessageBox.warning(self.window(), "Não foi possível exportar o PNG", str(error))
+            return False
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return False
+        initial_path = self.file_path.with_suffix(".png") if self.file_path else Path("meu-design.png")
+        chosen, _ = QFileDialog.getSaveFileName(
+            self.window(), "Exportar como PNG", str(initial_path), "Imagem PNG (*.png)"
+        )
+        if not chosen:
+            return False
+        target = Path(chosen)
+        if target.suffix.lower() != ".png":
+            target = Path(str(target) + ".png")
+            if target.exists():
+                answer = QMessageBox.question(
+                    self.window(), "Substituir imagem?",
+                    f"{target.name} já existe. Deseja substituir a imagem?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if answer != QMessageBox.StandardButton.Yes:
+                    return False
+        return self.export_png_path(
+            target, display_mode=dialog.display_mode(), show_grid=dialog.show_grid(),
+            piece_size_mm=dialog.piece_size_mm(),
+        )
+
+    def export_png_path(self, path, *, display_mode=None, show_grid=None, piece_size_mm=None) -> bool:
+        """Write an image while keeping the open document and its save state."""
+        self.rename_design()
+        self.canvas.finish_stroke()
+        target = Path(path)
+        try:
+            save_png(
+                self.design, target,
+                display_mode=self.canvas.display_mode if display_mode is None else display_mode,
+                show_grid=self.canvas.show_grid if show_grid is None else show_grid,
+                piece_size_mm=self.preferences.piece_size_mm() if piece_size_mm is None else piece_size_mm,
+            )
+        except (OSError, ValueError, RuntimeError) as error:
+            QMessageBox.warning(
+                self.window(), "Não foi possível exportar o PNG",
+                f"A imagem não pôde ser salva.\n\n{error}",
+            )
+            return False
+        self.status_text.setText(f"Imagem PNG exportada para {target.name}.")
+        return True
 
     def _save_path(self, path):
         try:

@@ -158,15 +158,16 @@ class HomePage(QWidget):
 
     def _module_card(self, module: ModuleDefinition, module_icon: QIcon) -> QWidget:
         card = QFrame(objectName="moduleCard")
-        card.setMinimumHeight(250)
+        compact = module.id == "settings"
+        card.setMinimumHeight(180 if compact else 250)
         content = QVBoxLayout(card)
-        content.setContentsMargins(25, 24, 25, 24)
+        content.setContentsMargins(25, 20 if compact else 24, 25, 20 if compact else 24)
         content.setSpacing(12)
         row = QHBoxLayout()
         row.setSpacing(16)
         illustration = QLabel()
         illustration.setObjectName("moduleIcon")
-        illustration.setFixedSize(60, 60)
+        illustration.setFixedSize(44 if compact else 60, 44 if compact else 60)
         illustration.setAlignment(Qt.AlignmentFlag.AlignCenter)
         illustration.setPixmap(module_icon.pixmap(36, 36))
         row.addWidget(illustration)

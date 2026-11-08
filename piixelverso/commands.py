@@ -62,6 +62,8 @@ class EditorCommandBar(QWidget):
         }
         for name in ("new", "open", "save", "save_as"):
             self.menus["file"].addAction(commands[name])
+        self.menus["file"].addSeparator()
+        self.menus["file"].addAction(commands["export_png"])
         for name in ("undo", "redo"):
             self.menus["edit"].addAction(commands[name])
         self.menus["edit"].addSeparator()
