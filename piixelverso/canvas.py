@@ -6,6 +6,7 @@ from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPainterPath, QPen, QRa
 from PySide6.QtWidgets import QWidget
 
 from .model import PixelDesign
+from .theme import BORDER, EMPTY_ALT, GRID, MUTED, PINK, WHITE
 
 
 class PixelCanvas(QWidget):
@@ -77,7 +78,7 @@ class PixelCanvas(QWidget):
         gradient.setColorAt(0, base.lighter(108))
         gradient.setColorAt(0.55, base)
         gradient.setColorAt(1, base.darker(108))
-        outline = QColor("#CFD5CE") if base.lightness() > 235 else base.darker(115)
+        outline = QColor(BORDER) if base.lightness() > 235 else base.darker(115)
         painter.fillPath(ring, gradient)
         painter.strokePath(outer_outline, QPen(outline, max(0.4, min(0.8, size * 0.03))))
 
@@ -100,21 +101,21 @@ class PixelCanvas(QWidget):
         for y in range(height):
             for x in range(width):
                 color = self.design.pixels[y * width + x]
-                background = "#FFFFFF" if (x + y) % 2 == 0 else "#F0F2F1"
+                background = WHITE if (x + y) % 2 == 0 else EMPTY_ALT
                 painter.fillRect(m + x * size, m + y * size, size, size,
                                  QColor(background if beads else color or background))
                 if beads and color is not None:
                     self._paint_bead(painter, m + x * size, m + y * size, size, color)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         if self.show_grid and size >= 7:
-            painter.setPen(QPen(QColor("#D5DDD9"), 1))
+            painter.setPen(QPen(QColor(GRID), 1))
             for x in range(width + 1):
                 painter.drawLine(m + x * size, m, m + x * size, m + height * size)
             for y in range(height + 1):
                 painter.drawLine(m, m + y * size, m + width * size, m + y * size)
-        painter.setPen(QPen(QColor("#ABB8B2"), 1))
+        painter.setPen(QPen(QColor(BORDER), 1))
         painter.drawRect(m, m, width * size, height * size)
-        painter.setPen(QColor("#84918A"))
+        painter.setPen(QColor(MUTED))
         font = painter.font()
         font.setPixelSize(9)
         painter.setFont(font)
@@ -127,7 +128,7 @@ class PixelCanvas(QWidget):
                 painter.drawText(QRect(0, m + y * size, 21, size), Qt.AlignmentFlag.AlignCenter, str(y + 1))
         if self._hover:
             x, y = self._hover
-            painter.setPen(QPen(QColor("#1B4237"), 2))
+            painter.setPen(QPen(QColor(PINK), 2))
             painter.drawRect(m + x * size + 1, m + y * size + 1, size - 2, size - 2)
 
     def mousePressEvent(self, event: QMouseEvent):

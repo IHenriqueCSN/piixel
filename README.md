@@ -15,6 +15,14 @@ Primeira versão de um aplicativo desktop nativo para desenhar pixel art e saber
 
 A contagem é a base para controlar materiais e calcular preços. Esta versão ainda não mantém um cadastro de estoque, custos, margens ou preços de venda.
 
+## Identidade visual
+
+A interface usa o kit de identidade visual v3 do Piixelverso: símbolo oficial do gatinho, logotipo em Pixelify Sans, textos em DejaVu Sans, fundo creme, azul-claro, rosa e contornos em tinta roxa. A frase de apoio é **Feito à mão, pixel por pixel.**
+
+O símbolo e o logotipo vetoriais preservam as formas, cores e transparências do kit. As fontes de apoio e suas licenças acompanham o aplicativo, sem precisar instalá-las no sistema. A barra de menus e ferramentas permanece compacta, com 44 px de altura. As cores dos desenhos continuam sendo escolhidas livremente.
+
+Os recursos usados e suas origens estão documentados em [piixelverso/assets/brand/README.md](piixelverso/assets/brand/README.md).
+
 ## Baixar o projeto
 
 [Baixar o código em ZIP para Windows e Linux](https://github.com/IHenriqueCSN/piixel/archive/refs/heads/main.zip).

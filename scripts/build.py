@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -38,6 +39,8 @@ def main() -> int:
         str(root / "build"),
         "--specpath",
         str(root / "build"),
+        "--add-data",
+        f"{root / 'piixelverso' / 'assets'}{os.pathsep}piixelverso/assets",
         str(entry_point),
     ]
     try:

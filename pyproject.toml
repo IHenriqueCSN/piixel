@@ -18,3 +18,6 @@ piixelverso = "piixelverso.app:main"
 
 [tool.setuptools.packages.find]
 include = ["piixelverso*"]
+
+[tool.setuptools.package-data]
+piixelverso = ["assets/brand/*.svg", "assets/brand/*.json", "assets/brand/*.ttf", "assets/brand/*.txt", "assets/brand/*.md"]

@@ -19,6 +19,8 @@ from .counts import ColorCountsView
 from .format import DesignFormatError, load_design, save_design
 from .model import PixelDesign, validate_name
 from .commands import EditorCommandBar
+from .brand import app_icon, ensure_fonts, svg_pixmap
+from .theme import APP_STYLE, BORDER, INK, PINK, apply_palette
 
 
 PALETTE = [
@@ -31,57 +33,12 @@ PALETTE = [
 ]
 COLOR_NAMES = {color: name for name, color in PALETTE}
 
-STYLE = """
-QWidget { color: #293C37; font-family: 'Segoe UI', 'DejaVu Sans', sans-serif; font-size: 12px; }
-QMainWindow, #root { background: #F2F4F1; }
-#topbar { background: #FFFFFF; border-bottom: 1px solid #DFE5DF; }
-#brand { font-size: 23px; font-weight: 800; letter-spacing: -1px; }
-#edition { color: #7F8C84; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
-#localBadge { color: #477362; background: #EFF5F0; border-radius: 12px; padding: 6px 12px; font-size: 11px; }
-#projectBar { background: #F2F4F1; }
-#eyebrow { color: #8A968E; font-size: 9px; font-weight: 700; letter-spacing: 2px; }
-#designName { background: transparent; border: 0; border-radius: 4px; padding: 1px 0; font-size: 23px; font-weight: 650; }
-#designName:focus { background: #FFFFFF; }
-#card, #editorCard { background: #FFFFFF; border: 1px solid #DDE4DD; border-radius: 12px; }
-#sectionTitle { font-weight: 700; font-size: 13px; }
-#muted { color: #849088; font-size: 11px; }
-#tiny { color: #8A968E; font-size: 10px; }
-#canvasStage { background: #E9EEE8; border: 0; }
-#editorHeading { font-weight: 650; font-size: 12px; }
-#canvasFooter { background: #FAFBF9; border-top: 1px solid #E3E8E1; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
-QPushButton { background: #FFFFFF; border: 1px solid #DCE3DC; border-radius: 7px; padding: 9px 13px; font-weight: 600; }
-QPushButton:hover { background: #F3F6F1; border-color: #ADBDB0; }
-QPushButton:pressed { background: #E8EFE7; }
-QPushButton:disabled { color: #B9C1BB; border-color: #E9EDE7; }
-QPushButton#primary { color: #FFFFFF; background: #285B49; border-color: #285B49; }
-QPushButton#primary:hover { background: #1D4939; }
-QPushButton#tool { text-align: left; padding: 10px 12px; font-weight: 500; }
-QPushButton#tool:checked { background: #EEF4EC; color: #285B49; border: 1px solid #88AB92; font-weight: 700; }
-QPushButton#iconButton { padding: 5px; border: 0; background: transparent; }
-QPushButton#iconButton:hover { background: #EDF2EA; }
-QPushButton#swatch { padding: 0; border-radius: 5px; }
-#activeColor { border: 1px solid #DDE4DD; border-radius: 8px; background: #FAFBF8; }
-#paletteBody { background: #FFFFFF; }
-#bigNumber { font-size: 44px; font-weight: 700; letter-spacing: -2px; }
-#statBox { background: #F1F6EF; border-radius: 10px; }
-#hint { color: #78887E; background: #F6F8F3; border-radius: 8px; padding: 12px; font-size: 11px; }
-#status { color: #7D8B82; font-size: 10px; }
-QScrollArea { border: 0; background: transparent; }
-QScrollBar:vertical { background: #F1F4EE; width: 8px; margin: 2px; }
-QScrollBar::handle:vertical { background: #C4CEC2; border-radius: 3px; min-height: 25px; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-QSlider::groove:horizontal { background: #DCE5D9; height: 4px; border-radius: 2px; }
-QSlider::handle:horizontal { background: #285B49; width: 12px; margin: -4px 0; border-radius: 6px; }
-QCheckBox { color: #718078; font-size: 11px; spacing: 6px; }
-QComboBox { border: 1px solid #DCE3DC; border-radius: 6px; padding: 6px 10px; background: #F8FAF5; }
-QComboBox:hover { border-color: #ADBDB0; }
-QLineEdit, QSpinBox { border: 1px solid #D0DACE; border-radius: 6px; padding: 8px; background: white; }
-QDialog { background: #F8FAF5; }
-QToolTip { background: #293C37; color: white; padding: 6px; border: 0; }
-"""
+STYLE = APP_STYLE
 
 
-def icon(kind: str, color="#52685B") -> QIcon:
+def icon(kind: str, color=INK) -> QIcon:
+    if kind == "brand":
+        return app_icon()
     pixmap = QPixmap(24, 24)
     pixmap.fill(Qt.GlobalColor.transparent)
     p = QPainter(pixmap)
@@ -121,11 +78,6 @@ def icon(kind: str, color="#52685B") -> QIcon:
     elif kind == "fit":
         for x, y, sx, sy in [(4, 4, 1, 1), (20, 4, -1, 1), (4, 20, 1, -1), (20, 20, -1, -1)]:
             p.drawLine(x, y, x + 5 * sx, y); p.drawLine(x, y, x, y + 5 * sy)
-    elif kind == "brand":
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor("#E7794B"))
-        for x, y in [(0, 0), (1, 0), (2, 0), (0, 1), (2, 1), (0, 2), (1, 2), (0, 3)]:
-            p.drawRoundedRect(3 + x * 5, 2 + y * 5, 4, 4, 0.7, 0.7)
     p.end()
     return QIcon(pixmap)
 
@@ -142,7 +94,7 @@ def button(text, callback, name=None, symbol=None):
     if name:
         result.setObjectName(name)
     if symbol:
-        result.setIcon(icon(symbol, "#FFFFFF" if name == "primary" else "#52685B"))
+        result.setIcon(icon(symbol, INK))
         result.setIconSize(QSize(18, 18))
     result.clicked.connect(callback)
     return result
@@ -210,11 +162,13 @@ class NewDesignDialog(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        ensure_fonts()
+        apply_palette(QApplication.instance())
         self.design = PixelDesign(name="Meu primeiro design")
         self.file_path: Path | None = None
         self.history = QUndoStack(self)
         self.history.setUndoLimit(300)
-        self.setWindowIcon(icon("brand"))
+        self.setWindowIcon(app_icon())
         self.setMinimumSize(1120, 750)
         self.resize(1380, 900)
         self._swatches = {}
@@ -243,13 +197,18 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout(topbar)
         top.setContentsMargins(28, 0, 28, 0)
         logo = QLabel()
-        logo.setPixmap(icon("brand").pixmap(32, 32))
+        logo.setPixmap(svg_pixmap("symbol.svg", 44, 38))
+        logo.setAccessibleName("Gatinho e planeta do Piixelverso")
         top.addWidget(logo)
-        top.addWidget(label("piixelverso", "brand"))
+        wordmark = QLabel()
+        wordmark.setObjectName("brand")
+        wordmark.setPixmap(svg_pixmap("wordmark.svg", 142, 25))
+        wordmark.setAccessibleName("Piixelverso")
+        top.addWidget(wordmark)
         top.addSpacing(16)
         top.addWidget(label("ATELIÊ DIGITAL", "edition"))
         top.addStretch()
-        badge = label("●  Feito pixel por pixel", "localBadge")
+        badge = label("Feito à mão, pixel por pixel.", "localBadge")
         badge.setMaximumHeight(29)
         top.addWidget(badge)
         layout.addWidget(topbar)
@@ -476,10 +435,10 @@ class MainWindow(QMainWindow):
     def select_color(self, color):
         self.canvas.color = color.upper()
         self.active_hex.setText(color.upper())
-        self.active_swatch.setStyleSheet(f"background: {color}; border: 1px solid #CAD4C8; border-radius: 5px;")
+        self.active_swatch.setStyleSheet(f"background: {color}; border: 1px solid {BORDER}; border-radius: 5px;")
         for value, swatch in self._swatches.items():
-            border = "2px solid #293C37" if value == color.upper() else "1px solid #CED7CB"
-            swatch.setStyleSheet(f"QPushButton {{ background: {value}; border: {border}; border-radius: 5px; }} QPushButton:hover {{ border: 2px solid #293C37; }}")
+            border = f"2px solid {INK}" if value == color.upper() else f"1px solid {BORDER}"
+            swatch.setStyleSheet(f"QPushButton {{ background: {value}; border: {border}; border-radius: 5px; }} QPushButton:hover {{ border: 2px solid {PINK}; }}")
 
     def pick_color(self, color):
         self.select_color(color)
@@ -679,7 +638,7 @@ def main(argv=None):
     app.setOrganizationName("Piixelverso")
     app.setStyle("Fusion")
     app.setStyleSheet(STYLE)
-    app.setFont(QFont("Segoe UI" if sys.platform == "win32" else "DejaVu Sans", 10))
+    app.setFont(QFont("DejaVu Sans", 10))
     window = MainWindow()
     window.show()
     if args.design:

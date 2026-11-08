@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QTableView,
 )
 
+from .theme import BORDER, HOVER, INK, MUTED, WHITE
 
 class _CountsModel(QAbstractTableModel):
     def __init__(self, color_names: dict[str, str], parent=None):
@@ -61,11 +62,11 @@ class _CountsDelegate(QStyledItemDelegate):
 
         painter.save()
         painter.setClipRect(rect)
-        painter.fillRect(rect, QColor("#F6F8F3" if hovered else "#FFFFFF"))
+        painter.fillRect(rect, QColor(HOVER if hovered else WHITE))
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         if index.column() == 0:
-            painter.setPen(QPen(QColor("#CCD5C9"), 1))
+            painter.setPen(QPen(QColor(BORDER), 1))
             painter.setBrush(QColor(color))
             painter.drawRoundedRect(QRect(rect.x() + 1, rect.y() + 12, 27, 27), 6, 6)
 
@@ -73,7 +74,7 @@ class _CountsDelegate(QStyledItemDelegate):
             name_font.setPixelSize(12)
             name_font.setWeight(QFont.Weight.DemiBold)
             painter.setFont(name_font)
-            painter.setPen(QColor("#293C37"))
+            painter.setPen(QColor(INK))
             available = max(0, rect.width() - 42)
             label = painter.fontMetrics().elidedText(name, Qt.TextElideMode.ElideRight, available)
             painter.drawText(rect.x() + 40, rect.y() + 22, label)
@@ -82,21 +83,21 @@ class _CountsDelegate(QStyledItemDelegate):
             hex_font.setPixelSize(10)
             hex_font.setWeight(QFont.Weight.Normal)
             painter.setFont(hex_font)
-            painter.setPen(QColor("#8A968E"))
+            painter.setPen(QColor(MUTED))
             painter.drawText(rect.x() + 40, rect.y() + 38, color)
         else:
             count_font = QFont(option.font)
             count_font.setPixelSize(14)
             count_font.setWeight(QFont.Weight.Bold)
             painter.setFont(count_font)
-            painter.setPen(QColor("#293C37"))
+            painter.setPen(QColor(INK))
             painter.drawText(
                 rect.adjusted(0, 0, -1, 0),
                 Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
                 f"{count:,}".replace(",", "."),
             )
 
-        painter.setPen(QPen(QColor("#F0F2EE"), 1))
+        painter.setPen(QPen(QColor(BORDER), 1))
         painter.drawLine(rect.bottomLeft(), rect.bottomRight())
         painter.restore()
 
@@ -121,7 +122,7 @@ class ColorCountsView(QTableView):
         self.setMouseTracking(True)
         self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setStyleSheet("QTableView { background: white; border: none; }")
+        self.setStyleSheet(f"QTableView {{ background: {WHITE}; border: none; }}")
 
         self.verticalHeader().hide()
         self.verticalHeader().setDefaultSectionSize(52)
@@ -161,7 +162,7 @@ class ColorCountsView(QTableView):
         if self._counts_model.rowCount() != 0:
             return
         painter = QPainter(self.viewport())
-        painter.setPen(QColor("#8A968E"))
+        painter.setPen(QColor(MUTED))
         font = QFont(self.font())
         font.setPixelSize(12)
         painter.setFont(font)

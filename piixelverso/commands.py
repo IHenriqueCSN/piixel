@@ -8,27 +8,29 @@ from PySide6.QtWidgets import (
     QSizePolicy, QSlider, QToolBar, QToolButton, QWidget,
 )
 
+from .theme import BORDER, HOVER, INK, LIGHT_PINK, MUTED, PINK, SELECTED, WHITE
 
-COMMAND_STYLE = """
-QWidget#editorCommandBar { background: #FFFFFF; border-bottom: 1px solid #DDE4DD; }
-QMenuBar#editorMenuBar { background: #FFFFFF; border: 0; spacing: 0; }
-QMenuBar#editorMenuBar::item { padding: 7px 9px; background: transparent; color: #3D5A49; }
-QMenuBar#editorMenuBar::item:selected { background: #EDF4E9; border-radius: 4px; }
-QMenu { background: #FFFFFF; color: #293C37; border: 1px solid #D2DDCF; padding: 4px; }
-QMenu::item { padding: 7px 28px 7px 24px; }
-QMenu::item:selected { background: #EAF3E5; color: #285B49; border-radius: 3px; }
-QMenu::item:disabled { color: #B2BDB5; }
-QMenu::separator { height: 1px; background: #E2E8DF; margin: 4px 8px; }
-QToolBar#editorToolBar { background: #FFFFFF; border: 0; spacing: 3px; padding: 0; }
-QToolBar#editorToolBar::separator { background: #DFE6DC; width: 1px; margin: 6px 5px; }
-QToolButton#compactCommand {
-    background: transparent; color: #334D40; border: 1px solid transparent;
+
+COMMAND_STYLE = f"""
+QWidget#editorCommandBar {{ background: {WHITE}; border-bottom: 1px solid {BORDER}; }}
+QMenuBar#editorMenuBar {{ background: {WHITE}; border: 0; spacing: 0; }}
+QMenuBar#editorMenuBar::item {{ padding: 7px 9px; background: transparent; color: {INK}; }}
+QMenuBar#editorMenuBar::item:selected {{ background: {HOVER}; border-radius: 4px; }}
+QMenu {{ background: {WHITE}; color: {INK}; border: 1px solid {BORDER}; padding: 4px; }}
+QMenu::item {{ padding: 7px 28px 7px 24px; }}
+QMenu::item:selected {{ background: {SELECTED}; color: {INK}; border-radius: 3px; }}
+QMenu::item:disabled {{ color: {MUTED}; }}
+QMenu::separator {{ height: 1px; background: {BORDER}; margin: 4px 8px; }}
+QToolBar#editorToolBar {{ background: {WHITE}; border: 0; spacing: 3px; padding: 0; }}
+QToolBar#editorToolBar::separator {{ background: {BORDER}; width: 1px; margin: 6px 5px; }}
+QToolButton#compactCommand {{
+    background: transparent; color: {INK}; border: 1px solid transparent;
     border-radius: 5px; padding: 4px;
-}
-QToolButton#compactCommand:hover { background: #F0F5ED; border-color: #D2DFCD; }
-QToolButton#compactCommand:pressed { background: #E4EEDF; }
-QToolButton#compactCommand:checked { background: #EAF3E5; border-color: #8FAE91; }
-QLabel#compactZoomValue { color: #61796B; font-size: 10px; }
+}}
+QToolButton#compactCommand:hover {{ background: {HOVER}; border-color: {LIGHT_PINK}; }}
+QToolButton#compactCommand:pressed {{ background: {SELECTED}; }}
+QToolButton#compactCommand:checked {{ background: {SELECTED}; border-color: {PINK}; }}
+QLabel#compactZoomValue {{ color: {MUTED}; font-size: 10px; }}
 """
 
 
