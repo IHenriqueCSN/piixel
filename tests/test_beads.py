@@ -13,7 +13,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from piixelverso.app import MainWindow, STYLE
+from piixelverso.atelier import AtelierModule as MainWindow, STYLE
 from piixelverso.format import encode_design, save_design
 from piixelverso.model import PixelDesign
 

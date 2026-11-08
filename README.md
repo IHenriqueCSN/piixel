@@ -1,8 +1,16 @@
-# Piixelverso · Editor de pixel art
+# Piixel · ferramentas do Piixelverso
 
-Primeira versão de um aplicativo desktop nativo para desenhar pixel art e saber quantas peças de cada cor serão necessárias. A interface usa Python e Qt (PySide6). Os designs ficam em arquivos locais `.pii`, sem login ou servidor.
+Piixel é um aplicativo desktop do Piixelverso, organizado em módulos. Ele abre em uma tela inicial com acesso ao **Ateliê**, o único módulo disponível nesta versão. O Ateliê permite desenhar pixel art e saber quantas peças de cada cor serão necessárias. A interface usa Python e Qt (PySide6), e os designs ficam em arquivos locais `.pii`.
 
-## Recursos
+## Tela inicial
+
+![Tela inicial do Piixel com o módulo Ateliê](docs/previa-inicio.png)
+
+Escolha **Abrir Ateliê** para entrar no editor. Dentro dele, use **← Início**, **Arquivo → Tela inicial** ou **Alt+Home** para voltar. Ao retornar à tela inicial, o desenho, o arquivo aberto, o histórico, as cores e a visualização ficam preservados durante a sessão. Use **Continuar no Ateliê** para retomar.
+
+Voltar ao início não salva nem descarta o desenho. Para conservar o trabalho depois de fechar o aplicativo, salve o arquivo `.pii`. Ao fechar o Piixel, a confirmação de alterações não salvas continua funcionando, inclusive na tela inicial.
+
+## Recursos do Ateliê
 
 - Grade de 1 a 128 quadradinhos em cada dimensão.
 - Lápis, borracha e conta-gotas para capturar cores já usadas.
@@ -29,7 +37,7 @@ Os recursos usados e suas origens estão documentados em [piixelverso/assets/bra
 
 Extraia o ZIP e abra a pasta `piixel-main`. O pacote contém o código-fonte e os iniciadores; para usá-lo, instale Python 3.11 ou superior. A geração de um executável sem depender de Python instalado está descrita ao final deste documento.
 
-![Editor Piixelverso com desenho de exemplo e contagem por cor](docs/previa.png)
+![Módulo Ateliê do Piixel com desenho de exemplo e contagem por cor](docs/previa.png)
 
 ## Iniciar no Windows
 
@@ -64,6 +72,8 @@ python3 -m venv .venv
 O aplicativo precisa de uma sessão gráfica. No Linux, o Qt depende também das bibliotecas gráficas da distribuição. Se aparecer um erro de plataforma Qt ou `xcb`, confira a biblioteca citada na mensagem e instale o pacote correspondente pelo gerenciador do sistema.
 
 ## Usar o editor
+
+Na tela inicial, entre no **Ateliê**. Em seguida:
 
 1. Em **Arquivo → Novo**, crie um design e escolha a largura e a altura da grade.
 2. Selecione uma cor na paleta ou use **Editar → Cor personalizada**.
@@ -103,8 +113,15 @@ Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto 
 | Menu Arquivo | Alt+A |
 | Menu Editar | Alt+E |
 | Menu Exibir | Alt+X |
+| Voltar à tela inicial | Alt+Home |
 
-O botão direito apaga sem trocar de ferramenta. Ao editar o nome do design, as letras são digitadas normalmente. No macOS, os comandos usam os atalhos nativos indicados nos menus.
+O botão direito apaga sem trocar de ferramenta. Ao editar o nome do design, as letras são digitadas normalmente. Os atalhos de edição ficam ativos apenas no Ateliê. No macOS, os comandos usam os atalhos nativos indicados nos menus.
+
+Também é possível abrir um arquivo diretamente no Ateliê pelo terminal:
+
+```sh
+python -m piixelverso examples/cogumelo-do-bosque.pii
+```
 
 ## Arquivos `.pii`
 
@@ -135,13 +152,17 @@ python -m pip install -r requirements-dev.txt
 python scripts/build.py
 ```
 
-O resultado fica em `dist/`. O build usa o modo `onedir`: distribua a pasta inteira gerada, com o executável e suas dependências. No Windows, ela contém `Piixelverso.exe`; no macOS, o PyInstaller pode gerar o pacote `.app`. Quem usar esse pacote não precisa instalar Python separadamente.
+O resultado fica em `dist/`. O build usa o modo `onedir`: distribua a pasta inteira gerada, com o executável e suas dependências. No Windows, a pasta `Piixel` contém `Piixel.exe`; no macOS, o PyInstaller pode gerar o pacote `.app`. Quem usar esse pacote não precisa instalar Python separadamente.
 
 Esta etapa gera o aplicativo para distribuição local. Assinatura digital, notarização e um instalador assistido poderão ser preparados depois, conforme o sistema escolhido.
 
 ## Organização
 
 - `piixelverso/`: aplicativo, grade, contagem, modelo e leitura/gravação `.pii`.
+- `piixelverso/app.py`: janela do Piixel e navegação, mantendo os módulos abertos durante a sessão.
+- `piixelverso/modules.py`: cadastro dos módulos disponíveis; nesta versão, somente o Ateliê.
+- `piixelverso/home.py`: tela inicial.
+- `piixelverso/atelier.py`: módulo Ateliê, com desenho, histórico, contagem e salvamento.
 - `tests/`: verificações do editor e do formato.
 - `run_piixelverso.py`: entrada usada no empacotamento.
 - `scripts/build.py`: geração do aplicativo pelo PyInstaller.

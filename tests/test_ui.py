@@ -13,7 +13,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from piixelverso.app import MainWindow, STYLE
+from piixelverso.atelier import AtelierModule as MainWindow, STYLE
 from piixelverso.counts import ColorCountsView
 from piixelverso.format import save_design
 from piixelverso.model import PixelDesign
@@ -157,7 +157,7 @@ class EditorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             invalid = Path(directory) / "invalid.pii"
             invalid.write_bytes(b"not a design")
-            with patch("piixelverso.app.QMessageBox.warning") as warning:
+            with patch("piixelverso.atelier.QMessageBox.warning") as warning:
                 self.assertFalse(self.window.load_path(invalid))
                 warning.assert_called_once()
         self.assertEqual(self.window.design, before)
@@ -182,7 +182,7 @@ class EditorTests(unittest.TestCase):
             save_design(PixelDesign(8, 8, name=name), path)
             self.assertTrue(self.window.load_path(path))
             self.assertEqual(self.window.name_edit.text(), name)
-            with patch("piixelverso.app.QMessageBox.exec", side_effect=AssertionError("Documento sem edição não deve pedir para salvar")):
+            with patch("piixelverso.atelier.QMessageBox.exec", side_effect=AssertionError("Documento sem edição não deve pedir para salvar")):
                 self.assertTrue(self.window.confirm_discard())
             self.assertEqual(self.window.design.name, name)
             self.assertTrue(self.window.history.isClean())
@@ -235,8 +235,8 @@ class EditorTests(unittest.TestCase):
             previous_data = original.read_bytes()
             self.click_cell(2, 1)
             before = self.window.design.clone()
-            with patch("piixelverso.app.save_design", side_effect=OSError("Permissão negada")):
-                with patch("piixelverso.app.QMessageBox.warning") as warning:
+            with patch("piixelverso.atelier.save_design", side_effect=OSError("Permissão negada")):
+                with patch("piixelverso.atelier.QMessageBox.warning") as warning:
                     self.assertFalse(self.window._save_path(Path(directory) / "outro.pii"))
                     warning.assert_called_once()
             self.assertEqual(self.window.file_path, original)

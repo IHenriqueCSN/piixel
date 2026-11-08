@@ -13,7 +13,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialog
 
-from piixelverso.app import MainWindow, STYLE
+from piixelverso.atelier import AtelierModule as MainWindow, STYLE
 from piixelverso.format import encode_design, load_design, save_design
 from piixelverso.model import PixelDesign
 
@@ -94,7 +94,7 @@ class CommandBarTests(unittest.TestCase):
             design = PixelDesign(5, 3, name="Bosque reaberto")
             design.set_pixel(3, 1, "#245448")
             save_design(design, path)
-            with patch("piixelverso.app.QFileDialog.getOpenFileName",
+            with patch("piixelverso.atelier.QFileDialog.getOpenFileName",
                        return_value=(str(path), "Design Piixelverso (*.pii)")) as picker:
                 self.click_menu_command("file", "open")
                 picker.assert_called_once()
@@ -103,14 +103,14 @@ class CommandBarTests(unittest.TestCase):
             self.assertEqual(self.window.total_label.text(), "1")
             self.assertTrue(self.window.history.isClean())
             self.paint_cell(0, 0)
-            with patch("piixelverso.app.QFileDialog.getSaveFileName",
+            with patch("piixelverso.atelier.QFileDialog.getSaveFileName",
                        side_effect=AssertionError("Um arquivo conhecido deve ser salvo sem novo diálogo")):
                 self.click_menu_command("file", "save")
             self.assertEqual(load_design(path), self.window.design)
             self.assertTrue(self.window.history.isClean())
 
     def test_file_shortcuts_work_without_opening_a_menu(self):
-        with patch("piixelverso.app.NewDesignDialog.exec",
+        with patch("piixelverso.atelier.NewDesignDialog.exec",
                    return_value=QDialog.DialogCode.Rejected) as new_dialog:
             self.key(Qt.Key.Key_N, Qt.KeyboardModifier.ControlModifier)
             new_dialog.assert_called_once()
@@ -118,7 +118,7 @@ class CommandBarTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             original = Path(directory) / "atalho-salvar.pii"
             duplicate = Path(directory) / "atalho-salvar-como.pii"
-            with patch("piixelverso.app.QFileDialog.getSaveFileName",
+            with patch("piixelverso.atelier.QFileDialog.getSaveFileName",
                        return_value=(str(original), "Design Piixelverso (*.pii)")) as picker:
                 self.key(Qt.Key.Key_S, Qt.KeyboardModifier.ControlModifier)
                 picker.assert_called_once()
@@ -126,17 +126,17 @@ class CommandBarTests(unittest.TestCase):
             self.assertEqual(self.window.file_path, original)
             self.assertTrue(self.window.history.isClean())
             self.paint_cell(4, 5)
-            with patch("piixelverso.app.QFileDialog.getSaveFileName",
+            with patch("piixelverso.atelier.QFileDialog.getSaveFileName",
                        side_effect=AssertionError("Salvar um arquivo conhecido não deve perguntar o caminho")):
                 self.key(Qt.Key.Key_S, Qt.KeyboardModifier.ControlModifier)
             self.assertEqual(load_design(original), self.window.design)
-            with patch("piixelverso.app.QFileDialog.getSaveFileName",
+            with patch("piixelverso.atelier.QFileDialog.getSaveFileName",
                        return_value=(str(duplicate), "Design Piixelverso (*.pii)")) as picker:
                 self.key(Qt.Key.Key_S, Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier)
                 picker.assert_called_once()
             self.assertEqual(load_design(duplicate), self.window.design)
             self.assertEqual(self.window.file_path, duplicate)
-            with patch("piixelverso.app.QFileDialog.getOpenFileName",
+            with patch("piixelverso.atelier.QFileDialog.getOpenFileName",
                        return_value=(str(original), "Design Piixelverso (*.pii)")) as picker:
                 self.key(Qt.Key.Key_O, Qt.KeyboardModifier.ControlModifier)
                 picker.assert_called_once()

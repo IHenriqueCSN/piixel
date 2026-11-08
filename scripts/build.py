@@ -31,7 +31,7 @@ def main() -> int:
         "--clean",
         "--windowed",
         "--name",
-        "Piixelverso",
+        "Piixel",
         "--onedir",
         "--distpath",
         str(root / "dist"),

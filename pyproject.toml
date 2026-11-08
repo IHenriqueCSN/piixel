@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "piixelverso"
 version = "0.1.0"
-description = "Editor desktop de pixel art com contagem de peças e arquivos .pii"
+description = "Piixel: aplicativo modular do Piixelverso com Ateliê de pixel art"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["PySide6-Essentials>=6.8,<7"]
@@ -14,6 +14,7 @@ dependencies = ["PySide6-Essentials>=6.8,<7"]
 build = ["pyinstaller>=6,<7"]
 
 [project.gui-scripts]
+piixel = "piixelverso.app:main"
 piixelverso = "piixelverso.app:main"
 
 [tool.setuptools.packages.find]
