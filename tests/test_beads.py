@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QApplication
 from piixelverso.atelier import AtelierModule as MainWindow, STYLE
 from piixelverso.format import encode_design, save_design
 from piixelverso.model import PixelDesign
+from piixelverso.preferences import PreferencesStore
 
 
 class BeadViewTests(unittest.TestCase):
@@ -26,7 +27,9 @@ class BeadViewTests(unittest.TestCase):
         cls.app.setStyleSheet(STYLE)
 
     def setUp(self):
-        self.window = MainWindow()
+        self._preferences_directory = tempfile.TemporaryDirectory()
+        self.preferences = PreferencesStore(Path(self._preferences_directory.name) / "preferences.json")
+        self.window = MainWindow(preferences=self.preferences)
         self.window.show()
         design = PixelDesign(4, 4, name="Peças de teste")
         design.set_pixel(1, 1, "#E7794B")
@@ -43,6 +46,7 @@ class BeadViewTests(unittest.TestCase):
         self.window.close()
         self.window.deleteLater()
         self.app.processEvents()
+        self._preferences_directory.cleanup()
 
     def set_mode(self, mode):
         combo = self.window.display_mode_combo

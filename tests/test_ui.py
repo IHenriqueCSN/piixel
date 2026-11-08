@@ -17,6 +17,7 @@ from piixelverso.atelier import AtelierModule as MainWindow, STYLE
 from piixelverso.counts import ColorCountsView
 from piixelverso.format import save_design
 from piixelverso.model import PixelDesign
+from piixelverso.preferences import PreferencesStore
 
 
 class EditorTests(unittest.TestCase):
@@ -27,7 +28,9 @@ class EditorTests(unittest.TestCase):
         cls.app.setStyleSheet(STYLE)
 
     def setUp(self):
-        self.window = MainWindow()
+        self._preferences_directory = tempfile.TemporaryDirectory()
+        self.preferences = PreferencesStore(Path(self._preferences_directory.name) / "preferences.json")
+        self.window = MainWindow(preferences=self.preferences)
         self.window.show()
         self.window._replace_design(PixelDesign(8, 8, name="Pequeno universo"))
         self.app.processEvents()
@@ -41,6 +44,7 @@ class EditorTests(unittest.TestCase):
         self.window.close()
         self.window.deleteLater()
         self.app.processEvents()
+        self._preferences_directory.cleanup()
 
     def click_cell(self, x, y, button=Qt.MouseButton.LeftButton):
         QTest.mouseClick(self.window.canvas, button,

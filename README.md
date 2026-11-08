@@ -10,11 +10,15 @@ Escolha **Abrir Ateliê** para entrar no editor. Dentro dele, use **← Início*
 
 Voltar ao início não salva nem descarta o desenho. Para conservar o trabalho depois de fechar o aplicativo, salve o arquivo `.pii`. Ao fechar o Piixel, a confirmação de alterações não salvas continua funcionando, inclusive na tela inicial.
 
+À direita, **Últimos arquivos modificados** reúne os 20 designs abertos ou salvos mais recentes pela data de modificação do arquivo. Cada item mostra o nome do arquivo, uma miniatura e o caminho. Clique no item ou pressione Enter para abri-lo no Ateliê. A lista continua disponível ao reiniciar o Piixel e é atualizada ao voltar ao início.
+
+Se o arquivo tiver sido movido ou apagado, a miniatura e o caminho anteriores permanecem na lista, e o programa informa: **arquivo não encontrado. verifique se o arquivo foi movido ou apagado**. O desenho que já estiver aberto continua preservado. Para localizar um arquivo movido, entre no Ateliê e use **Arquivo → Abrir** com o novo caminho.
+
 ## Recursos do Ateliê
 
 - Grade de 1 a 128 quadradinhos em cada dimensão.
 - Lápis, borracha e conta-gotas para capturar cores já usadas.
-- Paleta inicial e seleção de cores personalizadas.
+- Paleta inicial e cores personalizadas da sessão, com opção de salvar cores nomeadas para próximas sessões.
 - Contagem por cor e total de peças; espaços vazios não entram na contagem.
 - Desfazer, refazer e zoom da grade.
 - Exibição em quadradinhos ou em rosquinhas estilo hama beads.
@@ -88,6 +92,18 @@ Em **Exibir → Peças**, alterne entre **Quadradinhos** e **Rosquinhas (hama be
 ![Visualização em rosquinhas estilo hama beads](docs/previa-rosquinhas.png)
 
 Clique no nome para renomear o design. A lista de cores à direita também permite selecionar uma cor já usada. Abra `examples/cogumelo-do-bosque.pii` para experimentar o editor com um desenho pronto.
+
+## Cores personalizadas
+
+Em **Editar → Cor personalizada**, informe um hexadecimal `#RRGGBB` ou use **Escolher cor**. Ao confirmar **Adicionar cor**, ela aparece na paleta e fica disponível durante a sessão, inclusive ao voltar ao início e retornar ao Ateliê.
+
+**Salvar para próximas sessões** começa desmarcado. Marque essa opção somente se quiser guardar a cor; nesse caso, também pode preencher um nome opcional. As cores salvas são restauradas ao iniciar outra sessão, e seus nomes aparecem na cor ativa, nas dicas da paleta e na contagem de peças.
+
+![Cor personalizada com opção de salvar e nomear](docs/previa-cor-personalizada.png)
+
+O botão direito sobre uma cor permite salvá-la, editar sua opção salva ou **Remover das cores salvas**. Remover essa opção mantém a cor disponível na sessão atual. Salvar um desenho `.pii` preserva as cores usadas nele, mas não transforma automaticamente suas cores em favoritas da paleta.
+
+A lista de recentes e as cores que você escolheu guardar ficam nas preferências locais do usuário, separadas dos arquivos `.pii`.
 
 ## Menus e atalhos
 
@@ -163,6 +179,9 @@ Esta etapa gera o aplicativo para distribuição local. Assinatura digital, nota
 - `piixelverso/modules.py`: cadastro dos módulos disponíveis; nesta versão, somente o Ateliê.
 - `piixelverso/home.py`: tela inicial.
 - `piixelverso/atelier.py`: módulo Ateliê, com desenho, histórico, contagem e salvamento.
+- `piixelverso/preferences.py`: preferências locais, arquivos recentes e cores salvas por escolha do usuário.
+- `piixelverso/recents.py`: lista com miniaturas, nomes e caminhos dos arquivos recentes.
+- `piixelverso/colors.py`: diálogo de cores personalizadas e opção de persistência.
 - `tests/`: verificações do editor e do formato.
 - `run_piixelverso.py`: entrada usada no empacotamento.
 - `scripts/build.py`: geração do aplicativo pelo PyInstaller.

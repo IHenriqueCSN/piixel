@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QApplication
 from piixelverso.app import MainWindow, STYLE
 from piixelverso.format import encode_design, load_design, save_design
 from piixelverso.model import PixelDesign
+from piixelverso.preferences import PreferencesStore
 from piixelverso.modules import MODULES
 
 
@@ -27,7 +28,9 @@ class HomeNavigationTests(unittest.TestCase):
         cls.app.setStyleSheet(STYLE)
 
     def setUp(self):
-        self.window = MainWindow()
+        self._preferences_directory = tempfile.TemporaryDirectory()
+        self.preferences = PreferencesStore(Path(self._preferences_directory.name) / "preferences.json")
+        self.window = MainWindow(preferences=self.preferences)
         self.window.show()
         self.window.activateWindow()
         self.app.processEvents()
@@ -46,6 +49,7 @@ class HomeNavigationTests(unittest.TestCase):
         self.window.close()
         self.window.deleteLater()
         self.app.processEvents()
+        self._preferences_directory.cleanup()
 
     def open_atelier(self):
         module = self.window.open_module("atelier")

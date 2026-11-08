@@ -2,20 +2,23 @@
 from __future__ import annotations
 
 from pathlib import Path
+from html import escape
 
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QActionGroup, QColor, QIcon, QKeySequence, QPainter, QPen, QPixmap, QUndoCommand, QUndoStack
 from PySide6.QtWidgets import (
-    QApplication, QColorDialog, QDialog,
+    QApplication, QDialog,
     QDialogButtonBox, QFileDialog, QFormLayout, QFrame, QGridLayout,
-    QHBoxLayout, QLabel, QLayout, QLineEdit, QMessageBox,
-    QPushButton, QScrollArea, QSpinBox, QVBoxLayout, QWidget,
+    QHBoxLayout, QLabel, QLayout, QLineEdit, QMenu, QMessageBox,
+    QPushButton, QScrollArea, QSizePolicy, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from .canvas import PixelCanvas
 from .counts import ColorCountsView
 from .format import DesignFormatError, load_design, save_design
-from .model import PixelDesign, validate_name
+from .model import PixelDesign, normalize_color, validate_name
+from .colors import CustomColorDialog
+from .preferences import PreferencesError, PreferencesStore
 from .commands import EditorCommandBar
 from .brand import app_icon, ensure_fonts, svg_pixmap
 from .theme import APP_STYLE, BORDER, INK, PINK, apply_palette
@@ -159,11 +162,16 @@ class NewDesignDialog(QDialog):
 
 class AtelierModule(QWidget):
     home_requested = Signal()
+    document_accessed = Signal(str, object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, preferences: PreferencesStore | None = None):
         super().__init__(parent)
         self.setObjectName("atelierModule")
         self._active = True
+        self.preferences = preferences if preferences is not None else PreferencesStore()
+        self.color_names = dict(COLOR_NAMES)
+        self._custom_color_names: dict[str, str] = {}
+        self._saved_colors = {}
         ensure_fonts()
         apply_palette(QApplication.instance())
         self.design = PixelDesign(name="Meu primeiro design")
@@ -180,6 +188,7 @@ class AtelierModule(QWidget):
         self._counts_timer.timeout.connect(self.refresh_counts)
         self._create_actions()
         self._build()
+        self._load_saved_colors()
         self._connect_command_bar()
         self.history.indexChanged.connect(self._history_changed)
         self.refresh_design()
@@ -272,6 +281,7 @@ class AtelierModule(QWidget):
         outer = QVBoxLayout(pane)
         outer.setContentsMargins(1, 1, 1, 1)
         scroll = QScrollArea()
+        self.palette_scroll = scroll
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         body = QWidget(objectName="paletteBody")
@@ -299,6 +309,13 @@ class AtelierModule(QWidget):
         text.addWidget(label("COR ATIVA", "eyebrow"))
         self.active_hex = label("#E7794B", "sectionTitle")
         text.addWidget(self.active_hex)
+        self.active_color_name = label("", "tiny")
+        self.active_color_name.setTextFormat(Qt.TextFormat.PlainText)
+        self.active_color_name.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.active_color_name.setMinimumWidth(0)
+        self.active_color_name.setWordWrap(True)
+        self.active_color_name.hide()
+        text.addWidget(self.active_color_name)
         active_layout.addLayout(text)
         contents.addWidget(active)
         contents.addStretch()
@@ -316,6 +333,10 @@ class AtelierModule(QWidget):
         swatch.setToolTip(f"{name} · {color}")
         swatch.setAccessibleName(f"Selecionar cor {color}")
         swatch.clicked.connect(lambda checked=False, value=color: self.select_color(value))
+        swatch.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        swatch.customContextMenuRequested.connect(
+            lambda position, value=color: self._show_color_menu(value, position)
+        )
         self._swatches[color] = swatch
         self.palette_grid.addWidget(swatch, index // 4, index % 4)
 
@@ -384,7 +405,7 @@ class AtelierModule(QWidget):
         columns.addStretch()
         columns.addWidget(label("QTD.", "eyebrow"))
         contents.addLayout(columns)
-        self.count_view = ColorCountsView(COLOR_NAMES)
+        self.count_view = ColorCountsView(self.color_names)
         self.count_view.color_selected.connect(self.pick_color)
         contents.addWidget(self.count_view, 1)
         note = label("Cada quadradinho pintado conta como uma peça. Células vazias ficam fora da contagem.", "hint")
@@ -447,6 +468,10 @@ class AtelierModule(QWidget):
     def select_color(self, color):
         self.canvas.color = color.upper()
         self.active_hex.setText(color.upper())
+        name = self._custom_color_names.get(color.upper(), "")
+        self.active_color_name.setText(name)
+        self.active_color_name.setToolTip(f"<p>{escape(name)}</p>" if name else "")
+        self.active_color_name.setVisible(bool(name))
         self.active_swatch.setStyleSheet(f"background: {color}; border: 1px solid {BORDER}; border-radius: 5px;")
         for value, swatch in self._swatches.items():
             border = f"2px solid {INK}" if value == color.upper() else f"1px solid {BORDER}"
@@ -457,13 +482,98 @@ class AtelierModule(QWidget):
         self.select_tool("pencil")
 
     def custom_color(self):
-        color = QColorDialog.getColor(QColor(self.canvas.color), self.window(), "Escolher cor")
-        if color.isValid():
-            value = color.name().upper()
-            if value not in self._swatches and len(self._custom_colors) < 8:
-                self._add_swatch(value, "Personalizada", len(PALETTE) + len(self._custom_colors))
-                self._custom_colors.append(value)
-            self.select_color(value)
+        self._edit_custom_color(self.canvas.color)
+
+    def _edit_custom_color(self, color, *, save_for_future=False):
+        dialog = CustomColorDialog(
+            color, self.window(), name=self._custom_color_names.get(color, ""),
+            save_for_future=save_for_future,
+        )
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.add_custom_color(dialog.color_value(), dialog.color_name(), dialog.save_for_future())
+
+    def _load_saved_colors(self):
+        for item in self.preferences.saved_colors():
+            self._saved_colors[item.color] = item
+            self._remember_custom_color(item.color, item.name)
+
+    def _remember_custom_color(self, color, name="", *, replace_name=False):
+        if name:
+            self._custom_color_names[color] = name
+            self.color_names[color] = name
+        elif replace_name:
+            self._custom_color_names.pop(color, None)
+            self.color_names[color] = COLOR_NAMES.get(color, "Personalizada")
+        else:
+            self.color_names.setdefault(color, "Personalizada")
+        if color not in self._swatches:
+            self._add_swatch(color, self.color_names[color], len(PALETTE) + len(self._custom_colors))
+            self._custom_colors.append(color)
+        self._refresh_color_tooltip(color)
+
+    def _refresh_color_tooltip(self, color):
+        name = self.color_names.get(color, "Personalizada")
+        if color in self._saved_colors:
+            note = "Salva para próximas sessões"
+        else:
+            note = "Cor da paleta inicial" if color in COLOR_NAMES else "Disponível nesta sessão"
+        self._swatches[color].setToolTip(f"<p>{escape(name)} · {color}<br>{note}</p>")
+
+    def add_custom_color(self, color: str, name: str = "", persist: bool = False) -> None:
+        value = normalize_color(color)
+        if value is None:
+            raise ValueError("A cor precisa ter um valor RGB.")
+        if (not isinstance(name, str) or len(name.strip()) > 80
+                or any(ord(char) < 32 for char in name)):
+            raise ValueError("O nome da cor deve ter até 80 caracteres, em uma linha.")
+        name = name.strip()
+        self._remember_custom_color(value, name, replace_name=bool(persist))
+        error = None
+        if persist:
+            try:
+                self.preferences.save_color(value, name)
+            except (PreferencesError, OSError, ValueError) as exc:
+                error = exc
+            else:
+                self._saved_colors = {item.color: item for item in self.preferences.saved_colors()}
+        self._refresh_color_tooltip(value)
+        self.select_color(value)
+        self.refresh_counts()
+        QTimer.singleShot(0, self, lambda: self._reveal_color(value))
+        if error is not None:
+            QMessageBox.warning(
+                self.window(), "Cor adicionada nesta sessão",
+                "A cor foi adicionada à sessão, mas não foi possível salvá-la para próximas sessões."
+                f"\n\n{error}",
+            )
+
+    def _reveal_color(self, color):
+        body = self.palette_scroll.widget()
+        body.layout().activate()
+        body.adjustSize()
+        self.palette_scroll.ensureWidgetVisible(self._swatches[color], 0, 8)
+
+    def forget_saved_color(self, color: str) -> None:
+        value = normalize_color(color)
+        if value is None or value not in self._saved_colors:
+            return
+        try:
+            self.preferences.remove_color(value)
+        except (PreferencesError, OSError, ValueError) as error:
+            QMessageBox.warning(self.window(), "Não foi possível remover a cor salva", str(error))
+            return
+        self._saved_colors.pop(value, None)
+        self._refresh_color_tooltip(value)
+
+    def _show_color_menu(self, color, position):
+        menu = QMenu(self)
+        save = menu.addAction("Editar cor salva…" if color in self._saved_colors else "Salvar cor…")
+        save.triggered.connect(lambda _checked=False: self._edit_custom_color(color, save_for_future=True))
+        if color in self._saved_colors:
+            forget = menu.addAction("Remover das cores salvas")
+            forget.triggered.connect(lambda _checked=False: self.forget_saved_color(color))
+        menu.exec(self._swatches[color].mapToGlobal(position))
+        menu.deleteLater()
 
     def toggle_grid(self, checked):
         self.canvas.show_grid = checked
@@ -604,12 +714,19 @@ class AtelierModule(QWidget):
     def load_path(self, path):
         try:
             design = load_design(path)
+        except FileNotFoundError:
+            QMessageBox.warning(
+                self.window(), "Arquivo não encontrado",
+                "arquivo não encontrado. verifique se o arquivo foi movido ou apagado",
+            )
+            return False
         except (OSError, DesignFormatError, ValueError) as error:
             QMessageBox.warning(self.window(), "Não foi possível abrir", f"O arquivo não pôde ser aberto.\n\n{error}")
             return False
         if not self.confirm_discard():
             return False
         self._replace_design(design, path)
+        self.document_accessed.emit(str(self.file_path), self.design.clone())
         return True
 
     def save(self):
@@ -644,6 +761,7 @@ class AtelierModule(QWidget):
         self.file_path = Path(path)
         self.history.setClean()
         self._update_title()
+        self.document_accessed.emit(str(self.file_path), self.design.clone())
         return True
 
     def closeEvent(self, event):

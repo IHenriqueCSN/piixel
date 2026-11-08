@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QApplication, QDialog
 from piixelverso.atelier import AtelierModule as MainWindow, STYLE
 from piixelverso.format import encode_design, load_design, save_design
 from piixelverso.model import PixelDesign
+from piixelverso.preferences import PreferencesStore
 
 
 class CommandBarTests(unittest.TestCase):
@@ -26,7 +27,9 @@ class CommandBarTests(unittest.TestCase):
         cls.app.setStyleSheet(STYLE)
 
     def setUp(self):
-        self.window = MainWindow()
+        self._preferences_directory = tempfile.TemporaryDirectory()
+        self.preferences = PreferencesStore(Path(self._preferences_directory.name) / "preferences.json")
+        self.window = MainWindow(preferences=self.preferences)
         self.window.show()
         self.window._replace_design(PixelDesign(8, 8, name="Ateliê compacto"))
         self.window.activateWindow()
@@ -42,6 +45,7 @@ class CommandBarTests(unittest.TestCase):
         self.window.close()
         self.window.deleteLater()
         self.app.processEvents()
+        self._preferences_directory.cleanup()
 
     def close_popup(self):
         popup = QApplication.activePopupWidget()

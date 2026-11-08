@@ -7,13 +7,17 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QFont, QKeySequence
-from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStackedWidget
 
 from .atelier import AtelierModule, icon
 from .brand import app_icon, ensure_fonts
 from .home import HomePage
 from .modules import MODULES
+from .format import DesignFormatError, load_design
+from .model import PixelDesign
+from .preferences import PreferencesError, PreferencesStore
 from .theme import APP_STYLE, apply_palette
+from .thumbnails import thumbnail_png
 
 STYLE = APP_STYLE
 
@@ -21,7 +25,7 @@ STYLE = APP_STYLE
 class MainWindow(QMainWindow):
     """Keep module widgets alive so navigating home never discards their work."""
 
-    def __init__(self):
+    def __init__(self, preferences: PreferencesStore | None = None):
         super().__init__()
         ensure_fonts()
         apply_palette(QApplication.instance())
@@ -29,6 +33,9 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(app_icon())
         self.setMinimumSize(1120, 750)
         self.resize(1380, 900)
+        self.preferences = preferences if preferences is not None else PreferencesStore()
+        self._refreshing_recent_files = False
+        self._recent_error_reported = False
         self.current_module: str | None = None
         self.module_pages: dict[str, AtelierModule] = {}
         self._opened_modules: set[str] = set()
@@ -44,6 +51,7 @@ class MainWindow(QMainWindow):
         )
         self.pages.addWidget(self.home_page)
         self.home_page.module_requested.connect(self.open_module)
+        self.home_page.recent_file_requested.connect(self.open_design_path)
 
         self.home_action = QAction("Tela inicial", self)
         self.home_action.setShortcut(QKeySequence("Alt+Home"))
@@ -52,16 +60,19 @@ class MainWindow(QMainWindow):
         self.home_action.triggered.connect(self.show_home)
         self.addAction(self.home_action)
         self.show_home()
+        if self.preferences.load_error:
+            QTimer.singleShot(0, self._show_preferences_load_error)
 
     def _get_module(self, module_id: str) -> AtelierModule:
         if module_id not in self._definitions or module_id not in self._factories:
             raise ValueError(f"Módulo desconhecido: {module_id}")
         if module_id not in self.module_pages:
-            module = self._factories[module_id](parent=self.pages)
+            module = self._factories[module_id](parent=self.pages, preferences=self.preferences)
             module.set_active(False)
             self.pages.addWidget(module)
             self.module_pages[module_id] = module
             module.home_requested.connect(self.show_home)
+            module.document_accessed.connect(self._record_recent_file)
             module.windowTitleChanged.connect(
                 lambda _title, key=module_id: self._sync_module_state(key)
             )
@@ -111,6 +122,7 @@ class MainWindow(QMainWindow):
         self.pages.setCurrentWidget(self.home_page)
         self.home_action.setEnabled(False)
         self.setWindowTitle("Piixel — Início")
+        self.refresh_recent_files()
         QTimer.singleShot(0, self._focus_home_if_current)
 
     def _focus_home_if_current(self):
@@ -123,6 +135,47 @@ class MainWindow(QMainWindow):
             return False
         self.open_module("atelier")
         return True
+
+    def _record_recent_file(self, path: str, design: PixelDesign):
+        try:
+            self.preferences.record_file(path, thumbnail_png(design))
+            self._recent_error_reported = False
+        except (PreferencesError, OSError, ValueError, RuntimeError) as error:
+            self._warn_recent_error(error)
+        self.home_page.set_recent_files(self.preferences.recent_files())
+
+    def refresh_recent_files(self):
+        """Refresh known files on returning home; keep moved files identifiable."""
+        if self._refreshing_recent_files:
+            return
+        self._refreshing_recent_files = True
+        try:
+            for entry in self.preferences.recent_files():
+                path = Path(entry.path)
+                try:
+                    if not path.is_file() or path.stat().st_mtime_ns == entry.modified_ns:
+                        continue
+                    design = load_design(path)
+                except (OSError, DesignFormatError, ValueError):
+                    continue
+                try:
+                    self.preferences.record_file(path, thumbnail_png(design))
+                except (PreferencesError, OSError, ValueError, RuntimeError) as error:
+                    self._warn_recent_error(error)
+                    break
+            self.home_page.set_recent_files(self.preferences.recent_files())
+        finally:
+            self._refreshing_recent_files = False
+
+    def _warn_recent_error(self, error: Exception):
+        if not self._recent_error_reported:
+            self._recent_error_reported = True
+            message = f"Não foi possível guardar a lista de arquivos recentes.\n\n{error}"
+            QTimer.singleShot(0, lambda: QMessageBox.warning(self, "Arquivos recentes", message))
+
+    def _show_preferences_load_error(self):
+        if self.preferences.load_error:
+            QMessageBox.warning(self, "Preferências", self.preferences.load_error)
 
     def closeEvent(self, event):
         # An editor may be hidden on the home screen and still contain a design.

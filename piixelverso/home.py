@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from .brand import svg_pixmap
 from .modules import MODULES, ModuleDefinition
+from .recents import RecentFilesPanel
 from .theme import BORDER, CREAM, HOVER, INK, LIGHT_PINK, MUTED, PALE_BLUE, PINK, WHITE
 
 
@@ -40,6 +41,7 @@ QLabel#homeFootnote {{ color: {MUTED}; font-size: 11px; }}
 
 class HomePage(QWidget):
     module_requested = Signal(str)
+    recent_file_requested = Signal(str)
 
     def __init__(self, modules: Sequence[ModuleDefinition] = MODULES,
                  module_icons: dict[str, QIcon] | None = None, parent=None):
@@ -68,9 +70,14 @@ class HomePage(QWidget):
         centered.setContentsMargins(0, 0, 0, 0)
         centered.addStretch()
         content = QWidget()
-        content.setMaximumWidth(1060)
+        content.setMaximumWidth(1240)
         content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        contents = QVBoxLayout(content)
+        columns = QHBoxLayout(content)
+        columns.setContentsMargins(0, 0, 0, 0)
+        columns.setSpacing(28)
+        left = QWidget()
+        left.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        contents = QVBoxLayout(left)
         contents.setContentsMargins(0, 0, 0, 0)
         contents.setSpacing(24)
         contents.addWidget(self._hero())
@@ -79,12 +86,18 @@ class HomePage(QWidget):
             supplied = (module_icons or {}).get(module.id)
             module_icon = supplied or self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)
             contents.addWidget(self._module_card(module, module_icon))
+        contents.addStretch(1)
         footnote = self._label("Cada criação começa com um pixel.", "homeFootnote")
         contents.addWidget(footnote)
+        columns.addWidget(left, 1)
+        self.recent_panel = RecentFilesPanel()
+        self.recent_panel.setFixedWidth(390)
+        self.recent_panel.setMinimumHeight(520)
+        self.recent_panel.file_requested.connect(self.recent_file_requested.emit)
+        columns.addWidget(self.recent_panel)
         centered.addWidget(content, 1)
         centered.addStretch()
-        body_layout.addLayout(centered)
-        body_layout.addStretch(1)
+        body_layout.addLayout(centered, 1)
         scroll.setWidget(body)
         layout.addWidget(scroll, 1)
 
@@ -120,7 +133,7 @@ class HomePage(QWidget):
         hero = QWidget()
         row = QHBoxLayout(hero)
         row.setContentsMargins(0, 0, 0, 0)
-        row.setSpacing(48)
+        row.setSpacing(24)
         words = QVBoxLayout()
         words.setSpacing(11)
         words.addStretch()
@@ -132,12 +145,12 @@ class HomePage(QWidget):
         words.addStretch()
         row.addLayout(words, 1)
         mascot = QFrame(objectName="homeMascot")
-        mascot.setFixedSize(210, 210)
+        mascot.setFixedSize(140, 140)
         mascot_layout = QVBoxLayout(mascot)
-        mascot_layout.setContentsMargins(17, 24, 17, 24)
+        mascot_layout.setContentsMargins(14, 22, 14, 22)
         artwork = QLabel()
         artwork.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        artwork.setPixmap(svg_pixmap("symbol.svg", 176, 152))
+        artwork.setPixmap(svg_pixmap("symbol.svg", 112, 96))
         artwork.setAccessibleName("Mascote do Piixelverso")
         mascot_layout.addWidget(artwork)
         row.addWidget(mascot)
@@ -145,33 +158,31 @@ class HomePage(QWidget):
 
     def _module_card(self, module: ModuleDefinition, module_icon: QIcon) -> QWidget:
         card = QFrame(objectName="moduleCard")
-        card.setMinimumHeight(180)
-        row = QHBoxLayout(card)
-        row.setContentsMargins(27, 25, 27, 25)
-        row.setSpacing(22)
+        card.setMinimumHeight(250)
+        content = QVBoxLayout(card)
+        content.setContentsMargins(25, 24, 25, 24)
+        content.setSpacing(12)
+        row = QHBoxLayout()
+        row.setSpacing(16)
         illustration = QLabel()
         illustration.setObjectName("moduleIcon")
-        illustration.setFixedSize(76, 76)
+        illustration.setFixedSize(60, 60)
         illustration.setAlignment(Qt.AlignmentFlag.AlignCenter)
         illustration.setPixmap(module_icon.pixmap(36, 36))
         row.addWidget(illustration)
-
-        words = QVBoxLayout()
-        words.setSpacing(8)
-        words.addStretch()
-        words.addWidget(self._label(module.title, "moduleTitle"))
+        row.addWidget(self._label(module.title, "moduleTitle"), 1)
+        content.addLayout(row)
         description = self._label(module.description, "moduleDescription")
         description.setWordWrap(True)
-        words.addWidget(description)
+        content.addWidget(description)
         state = self._label("", "moduleState")
         state.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         state.hide()
-        words.addWidget(state)
+        content.addWidget(state)
         dirty = self._label("Alterações não salvas", "moduleDirty")
         dirty.hide()
-        words.addWidget(dirty, 0, Qt.AlignmentFlag.AlignLeft)
-        words.addStretch()
-        row.addLayout(words, 1)
+        content.addWidget(dirty, 0, Qt.AlignmentFlag.AlignLeft)
+        content.addStretch(1)
 
         launch = QPushButton(f"Abrir {module.title}")
         launch.setObjectName("openModule")
@@ -180,7 +191,7 @@ class HomePage(QWidget):
         launch.setAutoDefault(True)
         launch.setDefault(not self.module_buttons)
         launch.clicked.connect(lambda _checked=False, identifier=module.id: self.module_requested.emit(identifier))
-        row.addWidget(launch, 0, Qt.AlignmentFlag.AlignVCenter)
+        content.addWidget(launch, 0, Qt.AlignmentFlag.AlignLeft)
         self.module_buttons[module.id] = launch
         self._state_labels[module.id] = state
         self._dirty_labels[module.id] = dirty
@@ -200,3 +211,6 @@ class HomePage(QWidget):
     def focus_default_module(self) -> None:
         if self.module_buttons:
             next(iter(self.module_buttons.values())).setFocus(Qt.FocusReason.OtherFocusReason)
+
+    def set_recent_files(self, entries) -> None:
+        self.recent_panel.set_files(entries)
