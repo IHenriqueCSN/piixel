@@ -187,6 +187,56 @@ class ExportPngUiTests(unittest.TestCase):
         self.assertEqual(self.editor_state(), before)
         self.assertEqual(list(self.root.rglob("*.png")), [])
 
+    def test_preview_and_png_measure_only_the_painted_design_inside_an_empty_border(self):
+        from piixelverso.png_export import export_layout
+
+        design = PixelDesign(10, 9, name="Peças dentro da grade")
+        design.set_pixel(2, 1, CORAL)
+        design.set_pixel(6, 5, FOREST)
+        design.set_pixel(7, 6, "#FFFFFF")
+        self.atelier._replace_design(design)
+        self.assertTrue(self.atelier._save_path(self.source_path))
+        self.app.processEvents()
+        for mm, width_label, height_label in ((5.0, "30 mm", "30 mm"),
+                                             (2.6, "15,6 mm", "15,6 mm")):
+            self.preferences.set_piece_size_mm(mm)
+            for mode in ("squares", "beads"):
+                with self.subTest(piece_size_mm=mm, mode=mode):
+                    before = self.editor_state()
+                    path = self.root / f"arte-{mode}-{mm}.png"
+                    accept = self.accept_options(mode, False)
+
+                    def accept_measured_design(dialog):
+                        self.assertIn(f"Largura: {width_label}", dialog.dimensions_label.text())
+                        self.assertIn(f"Altura: {height_label}", dialog.dimensions_label.text())
+                        return accept(dialog)
+
+                    with patch("piixelverso.atelier.ExportPngDialog.exec",
+                               new=accept_measured_design), patch(
+                        "piixelverso.atelier.QFileDialog.getSaveFileName",
+                        return_value=(str(path), "PNG (*.png)"),
+                    ):
+                        self.key_export()
+                    image = self.read_png(path)
+                    layout = export_layout(design, mm)
+                    self.assertEqual((layout.width_label, layout.height_label),
+                                     (width_label, height_label))
+                    self.assertEqual(layout.design_left, layout.grid_left + 2 * layout.cell_size)
+                    self.assertEqual(layout.design_top, layout.grid_top + layout.cell_size)
+                    self.assertEqual((layout.design_width, layout.design_height),
+                                     (6 * layout.cell_size, 6 * layout.cell_size))
+                    self.assertEqual(image.pixelColor(
+                        layout.design_left + layout.design_width // 2,
+                        layout.horizontal_arrow_y).name(), "#000000")
+                    self.assertEqual(image.pixelColor(
+                        layout.vertical_arrow_x,
+                        layout.design_top + layout.design_height // 2).name(), "#000000")
+                    self.assertEqual(image.pixelColor(
+                        layout.grid_left + layout.grid_width,
+                        layout.horizontal_arrow_y).name(), "#ffffff")
+                    self.assertEqual(image.dotsPerMeterX(), round(32000 / mm))
+                    self.assertEqual(self.editor_state(), before)
+
     def test_canceling_the_save_location_does_not_write_or_change_the_document(self):
         before = self.editor_state()
         with patch("piixelverso.atelier.ExportPngDialog.exec",

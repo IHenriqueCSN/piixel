@@ -114,7 +114,7 @@ No Ateliê, use **Arquivo → Exportar como PNG…** ou **Ctrl+Shift+E**. Escolh
 
 ![Escolha da aparência e prévia do PNG com medidas](docs/previa-exportar-png.png)
 
-O PNG tem fundo branco e inclui setas de duas pontas e textos pretos: a largura fica acima do desenho e a altura à esquerda. As medidas consideram toda a grade, inclusive células vazias. Com o padrão de **5 mm por peça**, uma grade de **32 × 32** mede **160 × 160 mm**.
+O PNG tem fundo branco e inclui setas de duas pontas e textos pretos: a largura fica acima do desenho e a altura à esquerda. As medidas vão da borda da peça mais à esquerda à borda da peça mais à direita e da peça mais alta à mais baixa. As margens vazias ficam fora da medida; os espaços entre as peças continuam contando para a distância entre as extremidades. Por exemplo, um desenho que ocupa **10 colunas × 8 linhas**, mesmo dentro de uma grade maior, mede **50 × 40 mm** com peças de **5 mm**. Peças brancas também entram no cálculo. Sem peças pintadas, as medidas são **0 × 0 mm**.
 
 Clique em **Escolher onde salvar…** para selecionar a pasta e o nome do PNG. O arquivo registra também a densidade correspondente ao tamanho configurado da peça. Exportar mantém o caminho do design, o histórico e o estado de salvamento do `.pii`. Para continuar editando o trabalho em outra sessão, salve também o design pelo comando **Salvar**.
 

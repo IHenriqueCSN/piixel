@@ -92,7 +92,7 @@ class ExportPngDialog(QDialog):
         preview_layout.addWidget(self.preview_label)
         layout.addWidget(preview_frame)
 
-        note = QLabel("As medidas consideram toda a grade, inclusive células vazias.")
+        note = QLabel("As medidas vão de uma extremidade à outra do desenho, sem contar as margens vazias.")
         note.setWordWrap(True)
         note.setStyleSheet(f"color: {MUTED}; font-size: 11px;")
         layout.addWidget(note)

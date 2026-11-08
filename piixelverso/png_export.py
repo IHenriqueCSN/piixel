@@ -36,6 +36,18 @@ class ExportLayout:
     vertical_label_rect: QRect
     width_label: str
     height_label: str
+    design_left: int
+    design_top: int
+    design_width: int
+    design_height: int
+
+    @property
+    def has_design(self) -> bool:
+        return self.design_width > 0 and self.design_height > 0
+
+    @property
+    def design_rect(self) -> QRect:
+        return QRect(self.design_left, self.design_top, self.design_width, self.design_height)
 
     @property
     def grid_rect(self) -> QRect:
@@ -56,13 +68,28 @@ def format_mm(value: float) -> str:
     return f"{text} mm"
 
 
+def occupied_bounds(design: PixelDesign) -> tuple[int, int, int, int] | None:
+    """Return occupied cell edges, with exclusive right/bottom; white is a piece."""
+    design.validate()
+    left, top, right, bottom = design.width, design.height, 0, 0
+    for index, color in enumerate(design.pixels):
+        if color is not None:
+            row, column = divmod(index, design.width)
+            left, top = min(left, column), min(top, row)
+            right, bottom = max(right, column + 1), max(bottom, row + 1)
+    return (left, top, right, bottom) if right > left else None
+
+
 def measurement_labels(
     design: PixelDesign, piece_size_mm: float = DEFAULT_PIECE_SIZE_MM,
 ) -> tuple[str, str]:
-    """Return the physical width and height of the entire logical grid."""
-    design.validate()
+    """Measure from the outer edge of the first piece to that of the last."""
+    bounds = occupied_bounds(design)
     size = validate_piece_size_mm(piece_size_mm)
-    return format_mm(design.width * size), format_mm(design.height * size)
+    if bounds is None:
+        return "0 mm", "0 mm"
+    left, top, right, bottom = bounds
+    return format_mm((right - left) * size), format_mm((bottom - top) * size)
 
 
 def _dimension_font() -> QFont:
@@ -83,26 +110,35 @@ def export_layout(
     width_text = metrics.horizontalAdvance(width_label) + 12
     height_text = metrics.horizontalAdvance(height_label) + 12
     grid_width, grid_height = design.width * CELL_SIZE, design.height * CELL_SIZE
+    bounds = occupied_bounds(design)
+    min_column, min_row, max_column, max_row = bounds or (0, 0, 0, 0)
+    design_width = (max_column - min_column) * CELL_SIZE
+    design_height = (max_row - min_row) * CELL_SIZE
+    # Labels describe the occupied span; the editable grid keeps its placement.
+    span_width = design_width if bounds else grid_width
+    span_height = design_height if bounds else grid_height
+    offset_x, offset_y = min_column * CELL_SIZE, min_row * CELL_SIZE
 
     # Left: rotated height label, a clear gap, then the dimension arrow.
     vertical_label_left = _OUTER_MARGIN
     vertical_arrow_x = vertical_label_left + font_height + 16
     grid_left = vertical_arrow_x + 28
-    # A very short grid can have a label wider than the measured span.
-    grid_left = max(grid_left, math.ceil((width_text - grid_width) / 2) + _OUTER_MARGIN)
+    # A short occupied span can have a label wider than the measured design.
+    grid_left = max(grid_left, math.ceil((width_text - span_width) / 2) - offset_x + _OUTER_MARGIN)
     horizontal_arrow_y = _OUTER_MARGIN + font_height + 10
     grid_top = horizontal_arrow_y + 28
-    grid_top = max(grid_top, math.ceil((height_text - grid_height) / 2) + _OUTER_MARGIN)
+    grid_top = max(grid_top, math.ceil((height_text - span_height) / 2) - offset_y + _OUTER_MARGIN)
+    design_left, design_top = grid_left + offset_x, grid_top + offset_y
 
     horizontal_label_rect = QRect(
-        round(grid_left + (grid_width - width_text) / 2),
+        round(design_left + (span_width - width_text) / 2),
         horizontal_arrow_y - font_height - 8,
         width_text,
         font_height,
     )
     vertical_label_rect = QRect(
         vertical_label_left,
-        round(grid_top + (grid_height - height_text) / 2),
+        round(design_top + (span_height - height_text) / 2),
         font_height,
         height_text,
     )
@@ -112,6 +148,7 @@ def export_layout(
         CELL_SIZE, grid_left, grid_top, grid_width, grid_height,
         image_width, image_height, horizontal_arrow_y, vertical_arrow_x,
         horizontal_label_rect, vertical_label_rect, width_label, height_label,
+        design_left, design_top, design_width, design_height,
     )
 
 
@@ -119,25 +156,26 @@ def _paint_dimensions(painter: QPainter, layout: ExportLayout) -> None:
     painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
     painter.setPen(QPen(QColor("#000000"), 1))
     painter.setBrush(QColor("#000000"))
-    left, top = layout.grid_left, layout.grid_top
-    right, bottom = left + layout.grid_width, top + layout.grid_height
+    left, top = layout.design_left, layout.design_top
+    right, bottom = left + layout.design_width, top + layout.design_height
     y, x = layout.horizontal_arrow_y, layout.vertical_arrow_x
 
-    # Extension lines leave a small gap before the artwork itself.
-    for edge in (left, right):
-        painter.drawLine(edge, y - 6, edge, top - 5)
-    for edge in (top, bottom):
-        painter.drawLine(x - 6, edge, left - 5, edge)
-    painter.drawLine(left, y, right, y)
-    painter.drawLine(x, top, x, bottom)
-    head = 7
-    for points in (
-        [(left, y), (left + head, y - 3), (left + head, y + 3)],
-        [(right, y), (right - head, y - 3), (right - head, y + 3)],
-        [(x, top), (x - 3, top + head), (x + 3, top + head)],
-        [(x, bottom), (x - 3, bottom - head), (x + 3, bottom - head)],
-    ):
-        painter.drawPolygon(QPolygon([QPoint(px, py) for px, py in points]))
+    if layout.has_design:
+        # Extension lines stop just before the actual design's outer edges.
+        for edge in (left, right):
+            painter.drawLine(edge, y - 6, edge, top - 5)
+        for edge in (top, bottom):
+            painter.drawLine(x - 6, edge, left - 5, edge)
+        painter.drawLine(left, y, right, y)
+        painter.drawLine(x, top, x, bottom)
+        head = 7
+        for points in (
+            [(left, y), (left + head, y - 3), (left + head, y + 3)],
+            [(right, y), (right - head, y - 3), (right - head, y + 3)],
+            [(x, top), (x - 3, top + head), (x + 3, top + head)],
+            [(x, bottom), (x - 3, bottom - head), (x + 3, bottom - head)],
+        ):
+            painter.drawPolygon(QPolygon([QPoint(px, py) for px, py in points]))
 
     painter.setFont(_dimension_font())
     painter.drawText(layout.horizontal_label_rect, Qt.AlignmentFlag.AlignCenter, layout.width_label)
@@ -168,7 +206,7 @@ def render_png(
     design: PixelDesign, *, display_mode: str = "squares", show_grid: bool = True,
     piece_size_mm: float = DEFAULT_PIECE_SIZE_MM,
 ) -> QImage:
-    """Draw the entire grid and its physical measurements on a white image."""
+    """Draw the grid and the occupied design's measurements on a white image."""
     if display_mode not in ("squares", "beads"):
         raise ValueError("O modo de exibição deve ser 'squares' ou 'beads'.")
     if not isinstance(show_grid, bool):

@@ -123,8 +123,8 @@ class SettingsModule(QWidget):
         form.addRow("Lado da peça", self.piece_size_input)
         card_layout.addLayout(form)
         card_layout.addWidget(self._label(
-            "As medidas consideram a grade completa: colunas × tamanho da peça na horizontal "
-            "e linhas × tamanho da peça na vertical.", "settingsNote"
+            "A largura vai da peça mais à esquerda à mais à direita; a altura, da peça mais alta "
+            "à mais baixa. As margens vazias ficam fora da medida.", "settingsNote"
         ))
         card_layout.addWidget(self._label(
             "Clique em Salvar configurações para aplicar o valor às próximas exportações. "
