@@ -6,18 +6,19 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer
-from PySide6.QtGui import QAction, QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap, QUndoCommand, QUndoStack
+from PySide6.QtGui import QAction, QActionGroup, QColor, QFont, QIcon, QKeySequence, QPainter, QPen, QPixmap, QUndoCommand, QUndoStack
 from PySide6.QtWidgets import (
-    QApplication, QButtonGroup, QCheckBox, QColorDialog, QComboBox, QDialog,
+    QApplication, QColorDialog, QDialog,
     QDialogButtonBox, QFileDialog, QFormLayout, QFrame, QGridLayout,
-    QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMessageBox,
-    QPushButton, QScrollArea, QSlider, QSpinBox, QVBoxLayout, QWidget,
+    QHBoxLayout, QLabel, QLayout, QLineEdit, QMainWindow, QMessageBox,
+    QPushButton, QScrollArea, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from .canvas import PixelCanvas
 from .counts import ColorCountsView
 from .format import DesignFormatError, load_design, save_design
 from .model import PixelDesign, validate_name
+from .ribbon import EditorRibbon
 
 
 PALETTE = [
@@ -60,6 +61,7 @@ QPushButton#iconButton { padding: 5px; border: 0; background: transparent; }
 QPushButton#iconButton:hover { background: #EDF2EA; }
 QPushButton#swatch { padding: 0; border-radius: 5px; }
 #activeColor { border: 1px solid #DDE4DD; border-radius: 8px; background: #FAFBF8; }
+#paletteBody { background: #FFFFFF; }
 #bigNumber { font-size: 44px; font-weight: 700; letter-spacing: -2px; }
 #statBox { background: #F1F6EF; border-radius: 10px; }
 #hint { color: #78887E; background: #F6F8F3; border-radius: 8px; padding: 12px; font-size: 11px; }
@@ -101,9 +103,15 @@ def icon(kind: str, color="#52685B") -> QIcon:
             p.translate(24, 0); p.scale(-1, 1)
         p.drawArc(6, 7, 14, 14, -60 * 16, 240 * 16)
         p.drawLine(6, 7, 6, 13); p.drawLine(6, 13, 12, 13)
-    elif kind == "save":
+    elif kind in ("save", "save_as"):
         p.drawRoundedRect(4, 4, 16, 16, 2, 2)
         p.drawRect(8, 4, 8, 6); p.drawRect(8, 14, 8, 6)
+        if kind == "save_as":
+            p.drawLine(15, 19, 21, 13); p.drawLine(18, 13, 21, 16)
+    elif kind == "palette":
+        p.drawEllipse(3, 3, 18, 18)
+        for x, y in [(8, 7), (14, 6), (17, 12), (8, 14)]:
+            p.drawEllipse(x - 1, y - 1, 2, 2)
     elif kind == "folder":
         p.drawLine(3, 8, 3, 19); p.drawLine(3, 19, 21, 19)
         p.drawLine(21, 19, 21, 8); p.drawLine(21, 8, 12, 8)
@@ -214,9 +222,10 @@ class MainWindow(QMainWindow):
         self._counts_timer = QTimer(self)
         self._counts_timer.setSingleShot(True)
         self._counts_timer.timeout.connect(self.refresh_counts)
+        self._create_actions()
         self._build()
+        self._connect_ribbon()
         self.history.indexChanged.connect(self._history_changed)
-        self._shortcuts()
         self.refresh_design()
         self.select_color("#E7794B")
         self._history_changed()
@@ -230,7 +239,7 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         topbar = QFrame(objectName="topbar")
-        topbar.setFixedHeight(70)
+        topbar.setFixedHeight(52)
         top = QHBoxLayout(topbar)
         top.setContentsMargins(28, 0, 28, 0)
         logo = QLabel()
@@ -245,9 +254,18 @@ class MainWindow(QMainWindow):
         top.addWidget(badge)
         layout.addWidget(topbar)
 
+        self.ribbon = EditorRibbon(self.command_actions)
+        layout.addWidget(self.ribbon)
+        self.tool_buttons = {key: self.ribbon.buttons[key] for key in ("pencil", "eraser", "picker")}
+        self.undo_button = self.ribbon.buttons["undo"]
+        self.redo_button = self.ribbon.buttons["redo"]
+        self.display_mode_combo = self.ribbon.display_mode_combo
+        self.zoom = self.ribbon.zoom_slider
+        self.zoom_label = self.ribbon.zoom_label
+
         project_bar = QWidget(objectName="projectBar")
         project = QHBoxLayout(project_bar)
-        project.setContentsMargins(28, 19, 28, 19)
+        project.setContentsMargins(28, 12, 28, 12)
         title = QVBoxLayout()
         title.setSpacing(3)
         title.addWidget(label("SEU ESPAÇO DE CRIAÇÃO", "eyebrow"))
@@ -260,12 +278,6 @@ class MainWindow(QMainWindow):
         self.name_edit.editingFinished.connect(self.rename_design)
         title.addWidget(self.name_edit)
         project.addLayout(title, 1)
-        project.addSpacing(20)
-        project.addWidget(button("Novo", self.new_design, symbol="plus"))
-        project.addWidget(button("Abrir .pii", self.open_design, symbol="folder"))
-        self.save_button = button("Salvar design", self.save, "primary", "save")
-        self.save_button.setToolTip("Salvar design (Ctrl+S)")
-        project.addWidget(self.save_button)
         layout.addWidget(project_bar)
 
         workspace = QHBoxLayout()
@@ -287,22 +299,16 @@ class MainWindow(QMainWindow):
     def _left_panel(self):
         pane = QFrame(objectName="card")
         pane.setFixedWidth(215)
-        contents = QVBoxLayout(pane)
-        contents.setContentsMargins(17, 21, 17, 18)
+        outer = QVBoxLayout(pane)
+        outer.setContentsMargins(1, 1, 1, 1)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        body = QWidget(objectName="paletteBody")
+        contents = QVBoxLayout(body)
+        contents.setContentsMargins(16, 20, 16, 17)
+        contents.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         contents.setSpacing(10)
-        contents.addWidget(label("Ferramentas", "sectionTitle"))
-        contents.addSpacing(3)
-        group = QButtonGroup(self)
-        self.tool_buttons = {}
-        for key, name, shortcut in [("pencil", "Lápis", "B"), ("eraser", "Borracha", "E"), ("picker", "Conta-gotas", "I")]:
-            tool = button(f"{name}    {shortcut}", lambda checked=False, value=key: self.select_tool(value), "tool", key)
-            tool.setCheckable(True)
-            tool.setToolTip(f"{name} ({shortcut})")
-            group.addButton(tool)
-            self.tool_buttons[key] = tool
-            contents.addWidget(tool)
-        self.tool_buttons["pencil"].setChecked(True)
-        contents.addSpacing(17)
         contents.addWidget(label("Paleta de cores", "sectionTitle"))
         contents.addWidget(label("Um universo de possibilidades.", "tiny"))
         self.palette_grid = QGridLayout()
@@ -312,7 +318,6 @@ class MainWindow(QMainWindow):
             self._add_swatch(color, name, i)
         contents.addLayout(self.palette_grid)
         contents.addSpacing(4)
-        contents.addWidget(button("+  Cor personalizada", self.custom_color))
         active = QFrame(objectName="activeColor")
         active_layout = QHBoxLayout(active)
         active_layout.setContentsMargins(10, 10, 8, 10)
@@ -330,6 +335,8 @@ class MainWindow(QMainWindow):
         tip = label("DICA DO ATELIÊ\n\nArraste para desenhar. Use o botão direito para apagar.", "hint")
         tip.setWordWrap(True)
         contents.addWidget(tip)
+        scroll.setWidget(body)
+        outer.addWidget(scroll)
         return pane
 
     def _add_swatch(self, color, name, index):
@@ -354,24 +361,7 @@ class MainWindow(QMainWindow):
         toolbar.addSpacing(8)
         toolbar.addWidget(self.dimensions)
         toolbar.addStretch()
-        self.display_mode_combo = QComboBox()
-        self.display_mode_combo.setObjectName("displayMode")
-        self.display_mode_combo.setAccessibleName("Exibição das peças")
-        self.display_mode_combo.setToolTip("Escolha como as peças aparecem na prancheta")
-        self.display_mode_combo.addItem("Quadradinhos", "squares")
-        self.display_mode_combo.addItem("Rosquinhas (hama beads)", "beads")
-        self.display_mode_combo.setMinimumWidth(200)
-        self.display_mode_combo.currentIndexChanged.connect(self.change_display_mode)
-        toolbar.addWidget(self.display_mode_combo)
-        toolbar.addSpacing(8)
-        self.undo_button = button("", self.undo, "iconButton", "undo")
-        self.undo_button.setToolTip("Desfazer (Ctrl+Z)")
-        self.undo_button.setAccessibleName("Desfazer")
-        self.redo_button = button("", self.redo, "iconButton", "redo")
-        self.redo_button.setToolTip("Refazer (Ctrl+Shift+Z / Ctrl+Y)")
-        self.redo_button.setAccessibleName("Refazer")
-        toolbar.addWidget(self.undo_button)
-        toolbar.addWidget(self.redo_button)
+        toolbar.addWidget(label("1 célula = 1 peça", "tiny"))
         content.addLayout(toolbar)
         self.canvas = PixelCanvas(self.design)
         self.canvas.changed.connect(self._canvas_changed)
@@ -390,25 +380,8 @@ class MainWindow(QMainWindow):
         self.position_label = label("COL —   LIN —", "tiny")
         controls.addWidget(self.position_label)
         controls.addStretch()
-        grid = QCheckBox("Grade")
-        grid.setChecked(True)
-        grid.toggled.connect(self.toggle_grid)
-        controls.addWidget(grid)
-        controls.addSpacing(9)
-        self.zoom = QSlider(Qt.Orientation.Horizontal)
-        self.zoom.setRange(25, 250)
-        self.zoom.setValue(100)
-        self.zoom.setFixedWidth(85)
-        self.zoom.setAccessibleName("Zoom da prancheta")
-        self.zoom.valueChanged.connect(self.set_zoom)
-        controls.addWidget(self.zoom)
-        self.zoom_label = label("100%", "muted")
-        self.zoom_label.setFixedWidth(36)
-        controls.addWidget(self.zoom_label)
-        fit = button("", self.fit_canvas, "iconButton", "fit")
-        fit.setToolTip("Ajustar prancheta à janela")
-        fit.setAccessibleName("Ajustar prancheta à janela")
-        controls.addWidget(fit)
+        self.canvas_view_label = label("Quadradinhos · 100%", "muted")
+        controls.addWidget(self.canvas_view_label)
         content.addWidget(footer)
         return card
 
@@ -449,28 +422,57 @@ class MainWindow(QMainWindow):
         contents.addWidget(note)
         return pane
 
-    def _shortcuts(self):
-        for shortcut, callback in [
-            (QKeySequence.StandardKey.New, self.new_design),
-            (QKeySequence.StandardKey.Open, self.open_design),
-            (QKeySequence.StandardKey.Save, self.save),
-            (QKeySequence.StandardKey.SaveAs, self.save_as),
-            (QKeySequence.StandardKey.Undo, self.undo),
-            (QKeySequence.StandardKey.Redo, self.redo),
-            ("Ctrl+Shift+Z", self.redo),
-            ("B", lambda: self.select_tool("pencil")),
-            ("E", lambda: self.select_tool("eraser")),
-            ("I", lambda: self.select_tool("picker")),
-        ]:
-            action = QAction(self)
-            action.setShortcut(QKeySequence(shortcut))
-            action.triggered.connect(callback)
+    def _create_actions(self):
+        """One QAction per command powers both the ribbon and global shortcuts."""
+        standard = QKeySequence.StandardKey
+        specs = [
+            ("new", "Novo", "plus", self.new_design, standard.New),
+            ("open", "Abrir", "folder", self.open_design, standard.Open),
+            ("save", "Salvar", "save", self.save, standard.Save),
+            ("save_as", "Salvar como", "save_as", self.save_as, standard.SaveAs),
+            ("undo", "Desfazer", "undo", self.undo, standard.Undo),
+            ("redo", "Refazer", "redo", self.redo, standard.Redo),
+            ("pencil", "Lápis", "pencil", lambda: self.select_tool("pencil"), "B"),
+            ("eraser", "Borracha", "eraser", lambda: self.select_tool("eraser"), "E"),
+            ("picker", "Conta-gotas", "picker", lambda: self.select_tool("picker"), "I"),
+            ("custom_color", "Cor personalizada", "palette", self.custom_color, None),
+            ("fit", "Ajustar à janela", "fit", self.fit_canvas, None),
+        ]
+        self.command_actions = {}
+        self.tool_action_group = QActionGroup(self)
+        self.tool_action_group.setExclusive(True)
+        for key, text, symbol, callback, shortcut in specs:
+            action = QAction(icon(symbol), text, self)
+            action.setObjectName(f"action_{key}")
+            action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+            sequences = []
+            if isinstance(shortcut, QKeySequence.StandardKey):
+                sequences = QKeySequence.keyBindings(shortcut)
+            elif shortcut:
+                sequences = [QKeySequence(shortcut)]
+            if key == "redo":
+                sequences.extend([QKeySequence("Ctrl+Y"), QKeySequence("Ctrl+Shift+Z")])
+            unique = {s.toString(QKeySequence.SequenceFormat.PortableText): s for s in sequences}
+            action.setShortcuts(list(unique.values()))
+            hints = " / ".join(s.toString(QKeySequence.SequenceFormat.NativeText) for s in unique.values())
+            action.setToolTip(f"{text} ({hints})" if hints else text)
+            action.triggered.connect(lambda _checked=False, handler=callback: handler())
+            if key in ("pencil", "eraser", "picker"):
+                action.setCheckable(True)
+                self.tool_action_group.addAction(action)
+            self.command_actions[key] = action
             self.addAction(action)
+        self.command_actions["pencil"].setChecked(True)
+
+    def _connect_ribbon(self):
+        self.display_mode_combo.currentIndexChanged.connect(self.change_display_mode)
+        self.ribbon.grid_checkbox.toggled.connect(self.toggle_grid)
+        self.zoom.valueChanged.connect(self.set_zoom)
 
     def select_tool(self, tool):
         self.canvas.finish_stroke()
         self.canvas.tool = tool
-        self.tool_buttons[tool].setChecked(True)
+        self.command_actions[tool].setChecked(True)
 
     def select_color(self, color):
         self.canvas.color = color.upper()
@@ -500,10 +502,15 @@ class MainWindow(QMainWindow):
     def change_display_mode(self, index):
         self.canvas.finish_stroke()
         self.canvas.set_display_mode(self.display_mode_combo.itemData(index))
+        self._update_view_status()
 
     def set_zoom(self, percent):
         self.canvas.set_zoom(percent)
         self.zoom_label.setText(f"{round(self.canvas.cell_size / 16 * 100)}%")
+        self._update_view_status()
+
+    def _update_view_status(self):
+        self.canvas_view_label.setText(f"{self.display_mode_combo.currentText()} · {self.zoom_label.text()}")
 
     def fit_canvas(self):
         available = self.viewport.viewport().size()
@@ -519,8 +526,8 @@ class MainWindow(QMainWindow):
         self.history.push(PixelCommand(self, before, after, "Apagar pixels" if self.canvas._erase else "Pintar pixels"))
 
     def _history_changed(self, *args):
-        self.undo_button.setEnabled(self.history.canUndo())
-        self.redo_button.setEnabled(self.history.canRedo())
+        self.command_actions["undo"].setEnabled(self.history.canUndo())
+        self.command_actions["redo"].setEnabled(self.history.canRedo())
         self._update_title()
 
     def undo(self):

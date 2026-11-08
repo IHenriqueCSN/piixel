@@ -10,6 +10,7 @@ Primeira versão de um aplicativo desktop nativo para desenhar pixel art e saber
 - Contagem por cor e total de peças; espaços vazios não entram na contagem.
 - Desfazer, refazer e zoom da grade.
 - Exibição em quadradinhos ou em rosquinhas estilo hama beads.
+- Ribbon com abas Arquivo, Início e Exibir, comandos agrupados e atalhos de teclado.
 - Salvamento e leitura no formato binário `.pii`, preservando dimensões, nome e cores.
 
 A contagem é a base para controlar materiais e calcular preços. Esta versão ainda não mantém um cadastro de estoque, custos, margens ou preços de venda.
@@ -56,21 +57,46 @@ O aplicativo precisa de uma sessão gráfica. No Linux, o Qt depende também das
 
 ## Usar o editor
 
-1. Crie um design e escolha a largura e a altura da grade.
-2. Selecione uma cor na paleta ou adicione uma cor personalizada.
+1. Em **Arquivo → Novo**, crie um design e escolha a largura e a altura da grade.
+2. Selecione uma cor na paleta ou use **Início → Cor personalizada**.
 3. Clique e arraste sobre os quadradinhos para desenhar. Use a borracha para remover peças.
 4. Consulte a contagem por cor e o total de peças enquanto desenha.
-5. Salve o design com a extensão `.pii` e use **Abrir** para continuar depois.
+5. Use **Arquivo → Salvar** para gravar o design `.pii` e **Arquivo → Abrir** para continuar depois.
 
 O branco é uma cor e conta como peça quando aplicado. Um quadradinho vazio é transparente e não conta como peça.
 
-No seletor acima da prancheta, alterne entre **Quadradinhos** e **Rosquinhas (hama beads)**. As rosquinhas têm um furo central e continuam permitindo desenhar, apagar e capturar cores em toda a célula. Essa opção muda apenas a exibição: as cores, as quantidades e os arquivos `.pii` são os mesmos. A escolha vale durante a sessão e continua ativa ao abrir ou criar outro design.
+Em **Exibir → Peças**, alterne entre **Quadradinhos** e **Rosquinhas (hama beads)**. As rosquinhas têm um furo central e continuam permitindo desenhar, apagar e capturar cores em toda a célula. Essa opção muda apenas a exibição: as cores, as quantidades e os arquivos `.pii` são os mesmos. A escolha vale durante a sessão e continua ativa ao abrir ou criar outro design.
 
 ![Visualização em rosquinhas estilo hama beads](docs/previa-rosquinhas.png)
 
 Clique no nome para renomear o design. A lista de cores à direita também permite selecionar uma cor já usada. Abra `examples/cogumelo-do-bosque.pii` para experimentar o editor com um desenho pronto.
 
-Atalhos: **B** lápis, **E** borracha, **I** conta-gotas, **Ctrl+Z** desfazer, **Ctrl+Y** ou **Ctrl+Shift+Z** refazer, **Ctrl+N** novo, **Ctrl+O** abrir, **Ctrl+S** salvar e **Ctrl+Shift+S** salvar como. O botão direito apaga sem trocar de ferramenta.
+## Ribbon e atalhos
+
+A faixa de opções no topo reúne os comandos em três abas:
+
+- **Arquivo**: novo design, abrir, salvar e salvar como.
+- **Início**: desfazer/refazer, lápis, borracha, conta-gotas e cor personalizada.
+- **Exibir**: formato das peças, grade, zoom e ajustar à janela.
+
+Os atalhos aparecem abaixo dos comandos e nas dicas ao passar o mouse. Funcionam mesmo quando a aba do comando está fechada. No Windows e Linux:
+
+| Comando | Atalho |
+| --- | --- |
+| Novo design | Ctrl+N |
+| Abrir `.pii` | Ctrl+O |
+| Salvar | Ctrl+S |
+| Salvar como | Ctrl+Shift+S |
+| Desfazer | Ctrl+Z |
+| Refazer | Ctrl+Y ou Ctrl+Shift+Z |
+| Lápis | B |
+| Borracha | E |
+| Conta-gotas | I |
+| Aba Arquivo | Alt+A |
+| Aba Início | Alt+I |
+| Aba Exibir | Alt+X |
+
+O botão direito apaga sem trocar de ferramenta. Ao editar o nome do design, as letras são digitadas normalmente. No macOS, os comandos usam os atalhos nativos indicados na faixa de opções.
 
 ## Arquivos `.pii`
 
