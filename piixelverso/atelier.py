@@ -717,7 +717,7 @@ class AtelierModule(QWidget):
         except FileNotFoundError:
             QMessageBox.warning(
                 self.window(), "Arquivo não encontrado",
-                "arquivo não encontrado. verifique se o arquivo foi movido ou apagado",
+                "Arquivo não encontrado. Verifique se o arquivo foi movido ou apagado.",
             )
             return False
         except (OSError, DesignFormatError, ValueError) as error:

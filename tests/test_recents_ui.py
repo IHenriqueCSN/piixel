@@ -21,7 +21,7 @@ from piixelverso.model import PixelDesign
 from piixelverso.preferences import PreferencesStore
 
 
-MISSING_MESSAGE = "arquivo não encontrado. verifique se o arquivo foi movido ou apagado"
+MISSING_MESSAGE = "Arquivo não encontrado. Verifique se o arquivo foi movido ou apagado."
 
 
 class RecentFilesUiTests(unittest.TestCase):

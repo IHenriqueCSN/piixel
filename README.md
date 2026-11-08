@@ -12,7 +12,7 @@ Voltar ao início não salva nem descarta o desenho. Para conservar o trabalho d
 
 À direita, **Últimos arquivos modificados** reúne os 20 designs abertos ou salvos mais recentes pela data de modificação do arquivo. Cada item mostra o nome do arquivo, uma miniatura e o caminho. Clique no item ou pressione Enter para abri-lo no Ateliê. A lista continua disponível ao reiniciar o Piixel e é atualizada ao voltar ao início.
 
-Se o arquivo tiver sido movido ou apagado, a miniatura e o caminho anteriores permanecem na lista, e o programa informa: **arquivo não encontrado. verifique se o arquivo foi movido ou apagado**. O desenho que já estiver aberto continua preservado. Para localizar um arquivo movido, entre no Ateliê e use **Arquivo → Abrir** com o novo caminho.
+Se o arquivo tiver sido movido ou apagado, a miniatura e o caminho anteriores permanecem na lista, e o programa informa: **Arquivo não encontrado. Verifique se o arquivo foi movido ou apagado.** O desenho que já estiver aberto continua preservado. Para localizar um arquivo movido, entre no Ateliê e use **Arquivo → Abrir** com o novo caminho.
 
 ## Recursos do Ateliê
 
