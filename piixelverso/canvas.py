@@ -6,6 +6,7 @@ from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPainterPath, QPen, QRa
 from PySide6.QtWidgets import QWidget
 
 from .model import PixelDesign
+from .operations import flood_fill_changes
 from .theme import BORDER, EMPTY_ALT, GRID, MUTED, PINK, WHITE
 
 
@@ -136,6 +137,18 @@ class PixelCanvas(QWidget):
             return
         cell = self.cell_at(event.position().toPoint())
         if cell is None:
+            return
+        if self.tool == "bucket" and event.button() == Qt.MouseButton.LeftButton:
+            self.finish_stroke()
+            self._erase = False
+            changes = flood_fill_changes(self.design, *cell, self.color)
+            if changes:
+                before = {index: self.design.pixels[index] for index in changes}
+                for index, color in changes.items():
+                    self.design.pixels[index] = color
+                self.changed.emit()
+                self.stroke_finished.emit(before, changes)
+                self.update()
             return
         if self.tool == "picker" and event.button() == Qt.MouseButton.LeftButton:
             color = self.design.get_pixel(*cell)

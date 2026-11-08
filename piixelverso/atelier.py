@@ -17,6 +17,8 @@ from .canvas import PixelCanvas
 from .counts import ColorCountsView
 from .format import DesignFormatError, load_design, save_design
 from .model import PixelDesign, normalize_color, validate_name
+from .operations import replace_color_changes
+from .replace import ReplaceColorDialog
 from .colors import CustomColorDialog
 from .preferences import PreferencesError, PreferencesStore
 from .commands import EditorCommandBar
@@ -52,6 +54,18 @@ def icon(kind: str, color=INK) -> QIcon:
         p.drawLine(5, 16, 14, 5); p.drawLine(14, 5, 20, 10)
         p.drawLine(20, 10, 12, 20); p.drawLine(12, 20, 8, 20); p.drawLine(8, 20, 5, 16)
         p.drawLine(9, 12, 16, 17); p.drawLine(12, 20, 21, 20)
+    elif kind == "bucket":
+        p.drawPolygon([QPoint(x, y) for x, y in [(4, 11), (11, 4), (18, 11), (11, 18)]])
+        p.drawLine(8, 3, 15, 10); p.drawLine(4, 11, 18, 11)
+        p.drawLine(20, 13, 18, 17); p.drawLine(18, 17, 18, 19)
+        p.drawArc(18, 17, 4, 4, 180 * 16, 180 * 16); p.drawLine(22, 19, 20, 13)
+    elif kind == "replace_color":
+        p.drawRoundedRect(3, 4, 7, 7, 1, 1)
+        p.drawRoundedRect(14, 13, 7, 7, 1, 1)
+        p.drawLine(13, 6, 20, 6); p.drawLine(20, 6, 17, 3)
+        p.drawLine(20, 6, 17, 9)
+        p.drawLine(11, 18, 4, 18); p.drawLine(4, 18, 7, 15)
+        p.drawLine(4, 18, 7, 21)
     elif kind == "picker":
         p.drawLine(7, 14, 16, 5); p.drawLine(11, 18, 20, 9)
         p.drawLine(16, 5, 20, 9); p.drawLine(7, 14, 6, 20)
@@ -236,7 +250,7 @@ class AtelierModule(QWidget):
 
         self.command_bar = EditorCommandBar(self.command_actions)
         layout.addWidget(self.command_bar)
-        self.tool_buttons = {key: self.command_bar.buttons[key] for key in ("pencil", "eraser", "picker")}
+        self.tool_buttons = {key: self.command_bar.buttons[key] for key in ("pencil", "bucket", "eraser", "picker")}
         self.undo_button = self.command_bar.buttons["undo"]
         self.redo_button = self.command_bar.buttons["redo"]
         self.display_mode_combo = self.command_bar.display_mode_combo
@@ -424,8 +438,10 @@ class AtelierModule(QWidget):
             ("undo", "Desfazer", "undo", self.undo, standard.Undo),
             ("redo", "Refazer", "redo", self.redo, standard.Redo),
             ("pencil", "Lápis", "pencil", lambda: self.select_tool("pencil"), "B"),
+            ("bucket", "Balde de tinta", "bucket", lambda: self.select_tool("bucket"), "G"),
             ("eraser", "Borracha", "eraser", lambda: self.select_tool("eraser"), "E"),
             ("picker", "Conta-gotas", "picker", lambda: self.select_tool("picker"), "I"),
+            ("replace_color", "Substituir cor…", "replace_color", self.show_replace_color_dialog, "Ctrl+H"),
             ("custom_color", "Cor personalizada", "palette", self.custom_color, None),
             ("fit", "Ajustar à janela", "fit", self.fit_canvas, None),
         ]
@@ -448,7 +464,7 @@ class AtelierModule(QWidget):
             hints = " / ".join(s.toString(QKeySequence.SequenceFormat.NativeText) for s in unique.values())
             action.setToolTip(f"{text} ({hints})" if hints else text)
             action.triggered.connect(lambda _checked=False, handler=callback: handler())
-            if key in ("pencil", "eraser", "picker"):
+            if key in ("pencil", "bucket", "eraser", "picker"):
                 action.setCheckable(True)
                 self.tool_action_group.addAction(action)
             self.command_actions[key] = action
@@ -483,6 +499,25 @@ class AtelierModule(QWidget):
 
     def custom_color(self):
         self._edit_custom_color(self.canvas.color)
+
+    def show_replace_color_dialog(self):
+        self.canvas.finish_stroke()
+        if not self.design.counts():
+            return
+        dialog = ReplaceColorDialog(self.design, self.color_names, self.canvas.color, self.window())
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.replace_color(dialog.source_color(), dialog.target_color())
+
+    def replace_color(self, source: str, target: str) -> int:
+        """Replace every occurrence with one undo step; keep new colors in this session."""
+        self.canvas.finish_stroke()
+        after = replace_color_changes(self.design, source, target)
+        if not after:
+            return 0
+        before = {index: self.design.pixels[index] for index in after}
+        self.history.push(PixelCommand(self, before, after, "Substituir cor"))
+        self.add_custom_color(next(iter(after.values())))
+        return len(after)
 
     def _edit_custom_color(self, color, *, save_for_future=False):
         dialog = CustomColorDialog(
@@ -603,7 +638,9 @@ class AtelierModule(QWidget):
         self._update_title()
 
     def _commit_stroke(self, before, after):
-        self.history.push(PixelCommand(self, before, after, "Apagar pixels" if self.canvas._erase else "Pintar pixels"))
+        text = "Apagar pixels" if self.canvas._erase else (
+            "Preencher área" if self.canvas.tool == "bucket" else "Pintar pixels")
+        self.history.push(PixelCommand(self, before, after, text))
 
     def prepare_navigation(self):
         """Commit the current gesture and name before leaving this module."""
@@ -620,6 +657,7 @@ class AtelierModule(QWidget):
     def _history_changed(self, *args):
         self.command_actions["undo"].setEnabled(self._active and self.history.canUndo())
         self.command_actions["redo"].setEnabled(self._active and self.history.canRedo())
+        self.command_actions["replace_color"].setEnabled(self._active and self.design.filled_count > 0)
         self._update_title()
 
     def undo(self):
@@ -645,6 +683,7 @@ class AtelierModule(QWidget):
 
     def refresh_counts(self):
         counts = self.design.counts()
+        self.command_actions["replace_color"].setEnabled(self._active and bool(counts))
         total = sum(counts.values())
         number = lambda value: f"{value:,}".replace(",", ".")
         self.total_label.setText(number(total))

@@ -65,9 +65,10 @@ class EditorCommandBar(QWidget):
         for name in ("undo", "redo"):
             self.menus["edit"].addAction(commands[name])
         self.menus["edit"].addSeparator()
-        for name in ("pencil", "eraser", "picker"):
+        for name in ("pencil", "bucket", "eraser", "picker"):
             self.menus["edit"].addAction(commands[name])
         self.menus["edit"].addSeparator()
+        self.menus["edit"].addAction(commands["replace_color"])
         self.menus["edit"].addAction(commands["custom_color"])
         layout.addWidget(self.menubar)
 
@@ -85,7 +86,7 @@ class EditorCommandBar(QWidget):
         for name in ("undo", "redo"):
             self._add_command(name)
         self.toolbar.addSeparator()
-        for name in ("pencil", "eraser", "picker", "custom_color"):
+        for name in ("pencil", "bucket", "eraser", "picker", "replace_color", "custom_color"):
             self._add_command(name)
         self.toolbar.addSeparator()
 

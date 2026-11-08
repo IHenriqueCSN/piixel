@@ -17,7 +17,8 @@ Se o arquivo tiver sido movido ou apagado, a miniatura e o caminho anteriores pe
 ## Recursos do Ateliê
 
 - Grade de 1 a 128 quadradinhos em cada dimensão.
-- Lápis, borracha e conta-gotas para capturar cores já usadas.
+- Lápis, balde de tinta, borracha e conta-gotas para capturar cores já usadas.
+- Substituição de uma cor em todo o desenho, com prévia da quantidade de peças afetadas.
 - Paleta inicial e cores personalizadas da sessão, com opção de salvar cores nomeadas para próximas sessões.
 - Contagem por cor e total de peças; espaços vazios não entram na contagem.
 - Desfazer, refazer e zoom da grade.
@@ -87,6 +88,12 @@ Na tela inicial, entre no **Ateliê**. Em seguida:
 
 O branco é uma cor e conta como peça quando aplicado. Um quadradinho vazio é transparente e não conta como peça.
 
+Selecione **Balde de tinta** na barra ou pressione **G** e clique em uma célula para preencher a área da mesma cor ligada pelas laterais. Células que se tocam somente pela diagonal ficam separadas. O balde também preenche áreas vazias e funciona nas duas exibições de peças. Cada clique forma uma única ação de desfazer.
+
+Para trocar uma cor em todo o desenho, use **Editar → Substituir cor…** ou **Ctrl+H**. Escolha uma cor original entre as que já foram usadas e a nova cor, pelo código `#RRGGBB` ou pelo seletor. O diálogo mostra quantas peças serão alteradas antes de confirmar. A troca inclui regiões separadas e pode ser desfeita em uma única ação. A contagem por cor é atualizada, mantendo o total de peças. Uma nova cor de destino entra na paleta da sessão; use a opção de salvar cor se quiser guardá-la para próximas sessões.
+
+![Substituir cor com prévia da quantidade de peças](docs/previa-substituir-cor.png)
+
 Em **Exibir → Peças**, alterne entre **Quadradinhos** e **Rosquinhas (hama beads)**. As rosquinhas têm um furo central e continuam permitindo desenhar, apagar e capturar cores em toda a célula. Essa opção muda apenas a exibição: as cores, as quantidades e os arquivos `.pii` são os mesmos. A escolha vale durante a sessão e continua ativa ao abrir ou criar outro design.
 
 ![Visualização em rosquinhas estilo hama beads](docs/previa-rosquinhas.png)
@@ -110,7 +117,7 @@ A lista de recentes e as cores que você escolheu guardar ficam nas preferência
 A barra compacta no topo reúne menus tradicionais e ícones das ferramentas mais usadas. Os menus abrem somente quando acionados, deixando mais espaço para a prancheta:
 
 - **Arquivo**: novo design, abrir, salvar e salvar como.
-- **Editar**: desfazer/refazer, lápis, borracha, conta-gotas e cor personalizada.
+- **Editar**: desfazer/refazer, lápis, balde de tinta, borracha, conta-gotas, substituir cor e cor personalizada.
 - **Exibir**: formato das peças, grade, zoom e ajustar à janela.
 
 Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto você desenha, sem precisar abrir os menus. No Windows e Linux:
@@ -124,8 +131,10 @@ Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto 
 | Desfazer | Ctrl+Z |
 | Refazer | Ctrl+Y ou Ctrl+Shift+Z |
 | Lápis | B |
+| Balde de tinta | G |
 | Borracha | E |
 | Conta-gotas | I |
+| Substituir cor em todo o desenho | Ctrl+H |
 | Menu Arquivo | Alt+A |
 | Menu Editar | Alt+E |
 | Menu Exibir | Alt+X |
@@ -155,7 +164,7 @@ Dentro do ambiente virtual do projeto:
 python -m unittest discover -s tests
 ```
 
-`unittest` faz parte do Python. Os testes de interface usam QtTest e executam em modo offscreen. A validação da versão inicial cobre desenho contínuo, contagem, histórico, salvar/reabrir, falhas de gravação, arquivos inválidos e uma paleta com 16.384 cores.
+`unittest` faz parte do Python. Os testes de interface usam QtTest e executam em modo offscreen. A validação cobre desenho contínuo, preenchimento por área, substituição global de cor, contagem, histórico, salvar/reabrir, falhas de gravação, arquivos inválidos e uma paleta com 16.384 cores.
 
 ## Gerar um aplicativo para distribuição
 
@@ -182,6 +191,8 @@ Esta etapa gera o aplicativo para distribuição local. Assinatura digital, nota
 - `piixelverso/preferences.py`: preferências locais, arquivos recentes e cores salvas por escolha do usuário.
 - `piixelverso/recents.py`: lista com miniaturas, nomes e caminhos dos arquivos recentes.
 - `piixelverso/colors.py`: diálogo de cores personalizadas e opção de persistência.
+- `piixelverso/operations.py`: cálculo dos preenchimentos e substituições sem alterar o desenho original.
+- `piixelverso/replace.py`: escolha e prévia da substituição de cor.
 - `tests/`: verificações do editor e do formato.
 - `run_piixelverso.py`: entrada usada no empacotamento.
 - `scripts/build.py`: geração do aplicativo pelo PyInstaller.
