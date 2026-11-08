@@ -10,11 +10,12 @@ import unittest
 from unittest.mock import patch
 
 from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtGui import QColor
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialog
 
 from piixelverso.app import MainWindow
-from piixelverso.atelier import AtelierModule, STYLE
+from piixelverso.atelier import AtelierModule, PALETTE, STYLE
 from piixelverso.format import encode_design, load_design
 from piixelverso.model import PixelDesign
 from piixelverso.preferences import PreferencesStore
@@ -80,6 +81,14 @@ class PaintToolsTests(unittest.TestCase):
         self.window.canvas.setFocus()
         self.app.processEvents()
         QTest.keyClick(self.window.canvas, key, modifiers)
+        self.app.processEvents()
+
+    def activate_custom_target(self, dialog):
+        index = dialog.target_combo.findText("Escolher cor personalizada…")
+        self.assertGreaterEqual(index, 0)
+        self.assertEqual(index, dialog.target_combo.count() - 1)
+        dialog.target_combo.setCurrentIndex(index)
+        dialog.target_combo.activated.emit(index)
         self.app.processEvents()
 
     def assert_counts(self, expected):
@@ -258,11 +267,12 @@ class PaintToolsTests(unittest.TestCase):
             self.assertGreaterEqual(source_index, 0)
             dialog.source_combo.setCurrentIndex(source_index)
             self.assertIn("3", dialog.preview_label.text())
-            dialog.target_edit.setText("inválida")
+            self.assertFalse(dialog.target_combo.isEditable())
+            dialog.target_combo.setCurrentIndex(-1)
             self.assertFalse(dialog.replace_button.isEnabled())
-            dialog.target_edit.setText(SOURCE)
+            dialog.target_combo.setCurrentIndex(dialog.target_combo.findData(SOURCE))
             self.assertFalse(dialog.replace_button.isEnabled())
-            dialog.target_edit.setText(TARGET.lower())
+            dialog.target_combo.setCurrentIndex(dialog.target_combo.findData(TARGET))
             self.app.processEvents()
             self.assertTrue(dialog.replace_button.isEnabled())
             self.assertEqual(dialog.source_color(), SOURCE)
@@ -283,11 +293,17 @@ class PaintToolsTests(unittest.TestCase):
         before = encode_design(self.window.design)
         palette = set(self.window._swatches)
         dialogs = []
+        chosen = []
 
         def cancel_dialog(dialog):
             dialogs.append(dialog)
             dialog.show()
-            dialog.target_edit.setText("#123ABC")
+            with patch("piixelverso.replace.QColorDialog.getColor",
+                       return_value=QColor("#123ABC")) as picker:
+                self.activate_custom_target(dialog)
+                picker.assert_called_once()
+            self.assertEqual(dialog.target_color(), "#123ABC")
+            chosen.append(dialog.target_color())
             self.app.processEvents()
             QTest.keyClick(dialog, Qt.Key.Key_Escape)
             self.app.processEvents()
@@ -299,10 +315,135 @@ class PaintToolsTests(unittest.TestCase):
                              Qt.MouseButton.LeftButton)
             self.app.processEvents()
         self.assertEqual(len(dialogs), 1)
+        self.assertEqual(chosen, ["#123ABC"])
         self.assertEqual(encode_design(self.window.design), before)
         self.assertEqual(set(self.window._swatches), palette)
         self.assertEqual(self.window.history.count(), 0)
         self.assertTrue(self.window.history.isClean())
+        self.assertFalse(self.settings_path.exists())
+
+    def test_target_dropdown_includes_the_palette_and_saved_custom_colors_unused_in_the_design(self):
+        named, unnamed = "#08AA22", "#5B51CC"
+        name = "<b>Verde & folhas</b> " + "muito longo " * 5
+        name = name[:80]
+        self.window.add_custom_color(named, name=name, persist=True)
+        self.window.add_custom_color(unnamed, persist=True)
+        self.window.add_custom_color("#112233")
+        saved = self.settings_path.read_bytes()
+        original = self.set_design(["SS.U", "S..."], {"U": "#334455"})
+        self.window.select_color(TARGET)
+        dialogs = []
+
+        def accept_saved_target(dialog):
+            dialogs.append(dialog)
+            dialog.show()
+            self.app.processEvents()
+            self.assertFalse(dialog.target_combo.isEditable())
+            self.assertEqual(dialog.target_color(), TARGET)
+            sources = {dialog.source_combo.itemData(i) for i in range(dialog.source_combo.count())}
+            self.assertEqual(sources, {SOURCE, "#334455"})
+            self.assertEqual(dialog.source_color(), SOURCE)
+            self.assertIn("3 peças", dialog.source_combo.currentText())
+            for label, color in PALETTE:
+                with self.subTest(color=color):
+                    index = dialog.target_combo.findData(color)
+                    self.assertGreaterEqual(index, 0)
+                    self.assertIn(label, dialog.target_combo.itemText(index))
+                    self.assertIn(color, dialog.target_combo.itemText(index))
+                    self.assertFalse(dialog.target_combo.itemIcon(index).isNull())
+            named_index = dialog.target_combo.findData(named)
+            self.assertGreaterEqual(named_index, 0)
+            self.assertIn(named, dialog.target_combo.itemText(named_index))
+            tooltip = dialog.target_combo.itemData(named_index, Qt.ItemDataRole.ToolTipRole)
+            self.assertIn("&lt;b&gt;Verde &amp; folhas&lt;/b&gt;", tooltip)
+            self.assertLessEqual(dialog.width(), 600)
+            unnamed_index = dialog.target_combo.findData(unnamed)
+            self.assertGreaterEqual(unnamed_index, 0)
+            self.assertIn(unnamed, dialog.target_combo.itemText(unnamed_index))
+            self.assertEqual(dialog.target_combo.findData("#112233"), -1)
+            self.assertEqual(dialog.target_combo.findData("#334455"), -1)
+            dialog.target_combo.setCurrentIndex(named_index)
+            self.assertTrue(dialog.replace_button.isEnabled())
+            QTest.mouseClick(dialog.replace_button, Qt.MouseButton.LeftButton)
+            self.app.processEvents()
+            return dialog.result()
+
+        with patch("piixelverso.atelier.ReplaceColorDialog.exec", new=accept_saved_target):
+            self.key(Qt.Key.Key_H, Qt.KeyboardModifier.ControlModifier)
+        self.assertEqual(len(dialogs), 1)
+        self.assert_counts({named: 3, "#334455": 1})
+        self.assertEqual(self.window.history.count(), 1)
+        self.assertEqual(self.settings_path.read_bytes(), saved)
+        self.window.undo()
+        self.assertEqual(self.window.design, original)
+        self.assertTrue(self.window.history.isClean())
+
+    def test_canceling_the_custom_target_picker_restores_the_previous_dropdown_choice(self):
+        self.set_design(["SS.T", "S..."])
+        self.window.select_color(TARGET)
+        before = encode_design(self.window.design)
+        palette = set(self.window._swatches)
+        dialogs = []
+        restored = []
+
+        def cancel_picker_then_dialog(dialog):
+            dialogs.append(dialog)
+            dialog.show()
+            self.app.processEvents()
+            original_source = dialog.source_color()
+            original_target = dialog.target_color()
+            with patch("piixelverso.replace.QColorDialog.getColor",
+                       return_value=QColor()) as picker:
+                self.activate_custom_target(dialog)
+                picker.assert_called_once()
+            self.assertEqual(dialog.source_color(), original_source)
+            self.assertEqual(dialog.target_color(), original_target)
+            self.assertEqual(dialog.target_combo.currentData(), TARGET)
+            self.assertTrue(dialog.replace_button.isEnabled())
+            restored.append(dialog.target_color())
+            dialog.reject()
+            return dialog.result()
+
+        with patch("piixelverso.atelier.ReplaceColorDialog.exec", new=cancel_picker_then_dialog):
+            self.key(Qt.Key.Key_H, Qt.KeyboardModifier.ControlModifier)
+        self.assertEqual(len(dialogs), 1)
+        self.assertEqual(restored, [TARGET])
+        self.assertEqual(encode_design(self.window.design), before)
+        self.assertEqual(set(self.window._swatches), palette)
+        self.assertEqual(self.window.history.count(), 0)
+        self.assertFalse(self.settings_path.exists())
+
+    def test_custom_target_can_choose_an_existing_color_without_duplicate_entries(self):
+        self.set_design(["SS.T", "S..."])
+        self.window.select_color(SOURCE)
+        dialogs = []
+
+        def choose_existing_target(dialog):
+            dialogs.append(dialog)
+            dialog.show()
+            self.app.processEvents()
+            self.assertFalse(dialog.replace_button.isEnabled())
+            original_count = dialog.target_combo.count()
+            with patch("piixelverso.replace.QColorDialog.getColor",
+                       return_value=QColor(TARGET.lower())) as picker:
+                self.activate_custom_target(dialog)
+                picker.assert_called_once()
+            self.assertEqual(dialog.target_combo.count(), original_count)
+            self.assertEqual(sum(dialog.target_combo.itemData(i) == TARGET
+                                 for i in range(dialog.target_combo.count())), 1)
+            self.assertEqual(dialog.source_color(), SOURCE)
+            self.assertEqual(dialog.target_color(), TARGET)
+            self.assertTrue(dialog.replace_button.isEnabled())
+            QTest.mouseClick(dialog.replace_button, Qt.MouseButton.LeftButton)
+            self.app.processEvents()
+            return dialog.result()
+
+        with patch("piixelverso.atelier.ReplaceColorDialog.exec", new=choose_existing_target):
+            self.key(Qt.Key.Key_H, Qt.KeyboardModifier.ControlModifier)
+        self.assertEqual(len(dialogs), 1)
+        self.assert_counts({TARGET: 4})
+        self.assertEqual(self.window.history.count(), 1)
+        self.assertFalse(self.settings_path.exists())
 
     def test_g_selects_the_bucket_exclusively_without_stealing_the_design_name(self):
         for key, tool in ((Qt.Key.Key_G, "bucket"), (Qt.Key.Key_B, "pencil"),

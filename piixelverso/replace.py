@@ -7,8 +7,8 @@ from html import escape
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
-    QColorDialog, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QSizePolicy, QVBoxLayout,
+    QColorDialog, QComboBox, QDialog, QDialogButtonBox,
+    QLabel, QSizePolicy, QVBoxLayout,
 )
 
 from .model import PixelDesign, normalize_color
@@ -19,7 +19,8 @@ class ReplaceColorDialog(QDialog):
     """Collect RGB colors; the editor applies the replacement after acceptance."""
 
     def __init__(self, design: PixelDesign, color_names: Mapping[str, str],
-                 initial_target: str, parent=None):
+                 initial_target: str, parent=None, *,
+                 target_colors: Mapping[str, str] | None = None):
         super().__init__(parent)
         self.setWindowTitle("Substituir cor")
         self.setObjectName("replaceColorDialog")
@@ -27,6 +28,7 @@ class ReplaceColorDialog(QDialog):
         self.setMaximumWidth(600)
         self.resize(480, 300)
         self._design = design
+        self._color_names = color_names
         self._last_valid = PINK
         try:
             initial_target = normalize_color(initial_target) or ""
@@ -75,23 +77,30 @@ class ReplaceColorDialog(QDialog):
         layout.addWidget(self.source_combo)
 
         layout.addWidget(QLabel("Nova cor"))
-        target_row = QHBoxLayout()
-        target_row.setSpacing(10)
-        self.target_preview = QLabel()
-        self.target_preview.setObjectName("replacementTargetPreview")
-        self.target_preview.setFixedSize(36, 36)
-        self.target_preview.setAccessibleName("Prévia da nova cor")
-        target_row.addWidget(self.target_preview)
-        self.target_edit = QLineEdit(initial_target)
-        self.target_edit.setObjectName("replacementTarget")
-        self.target_edit.setAccessibleName("Código hexadecimal da nova cor")
-        self.target_edit.setPlaceholderText("#RRGGBB")
-        self.target_edit.setMaxLength(9)
-        target_row.addWidget(self.target_edit, 1)
-        self.choose_button = QPushButton("Escolher cor…")
-        self.choose_button.clicked.connect(self.choose_color)
-        target_row.addWidget(self.choose_button)
-        layout.addLayout(target_row)
+        self.target_combo = QComboBox()
+        self.target_combo.setObjectName("replacementTarget")
+        self.target_combo.setAccessibleName("Nova cor para substituir")
+        self.target_combo.setIconSize(QSize(18, 18))
+        self.target_combo.setMinimumContentsLength(20)
+        self.target_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.target_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.target_combo.view().setTextElideMode(Qt.TextElideMode.ElideRight)
+        self.target_combo.setPlaceholderText("Selecione uma cor")
+        self.target_combo.addItem("Escolher cor personalizada…", None)
+        for color, name in (target_colors if target_colors is not None else color_names).items():
+            value = normalize_color(color)
+            if value is not None:
+                self._add_target_color(value, name)
+        if initial_target:
+            index = self._add_target_color(initial_target, color_names.get(initial_target, "Personalizada"))
+            self.target_combo.setCurrentIndex(index)
+        elif self.target_combo.count() > 1:
+            self.target_combo.setCurrentIndex(0)
+        else:
+            self.target_combo.setCurrentIndex(-1)
+        layout.addWidget(self.target_combo)
 
         self.preview_label = QLabel()
         self.preview_label.setObjectName("replacementCount")
@@ -116,8 +125,31 @@ class ReplaceColorDialog(QDialog):
         layout.addWidget(self.buttons)
 
         self.source_combo.currentIndexChanged.connect(self._validate)
-        self.target_edit.textChanged.connect(self._validate)
+        self.target_combo.currentIndexChanged.connect(self._validate)
+        self.target_combo.activated.connect(self._target_activated)
         self._validate()
+
+    def _add_target_color(self, color: str, name: str) -> int:
+        """Insert before the custom-color action, reusing matching RGB entries."""
+        existing = self.target_combo.findData(color)
+        if existing >= 0:
+            return existing
+        name = name.strip()
+        short_name = self.target_combo.fontMetrics().elidedText(
+            name, Qt.TextElideMode.ElideRight, 240
+        )
+        text = f"{short_name} · {color}" if name else color
+        full_text = f"{name} · {color}" if name else color
+        index = self.target_combo.count() - 1
+        self.target_combo.insertItem(index, self._color_icon(color), text, color)
+        self.target_combo.setItemData(
+            index, f"<p>{escape(full_text)}</p>", Qt.ItemDataRole.ToolTipRole
+        )
+        return index
+
+    def _target_activated(self, _index: int):
+        if self.target_combo.currentData() is None:
+            self.choose_color()
 
     @staticmethod
     def _color_icon(color: str) -> QIcon:
@@ -138,9 +170,9 @@ class ReplaceColorDialog(QDialog):
         return value
 
     def target_color(self) -> str:
-        value = normalize_color(self.target_edit.text().strip())
+        value = normalize_color(self.target_combo.currentData())
         if value is None:
-            raise ValueError("Use uma cor no formato #RRGGBB.")
+            raise ValueError("Selecione uma nova cor ou escolha uma cor personalizada.")
         return value
 
     def _validate(self, *_args) -> bool:
@@ -158,18 +190,11 @@ class ReplaceColorDialog(QDialog):
             target = None
         if target is not None:
             self._last_valid = target
-            self.target_preview.setStyleSheet(
-                f"background: {target}; border: 1px solid {BORDER}; border-radius: 7px;"
-            )
-        else:
-            self.target_preview.setStyleSheet(
-                f"background: transparent; border: 1px dashed {BORDER}; border-radius: 7px;"
-            )
 
         if source is None:
             error = "Não há peças da cor selecionada para substituir."
         elif target is None:
-            error = "Use uma cor no formato #RRGGBB."
+            error = "Selecione uma nova cor ou escolha uma cor personalizada."
         elif source == target:
             error = "Escolha uma nova cor diferente da original."
         else:
@@ -181,15 +206,22 @@ class ReplaceColorDialog(QDialog):
         self.source_combo.setToolTip(
             self.source_combo.itemData(index, Qt.ItemDataRole.ToolTipRole) or ""
         )
+        self.target_combo.setToolTip(
+            self.target_combo.currentData(Qt.ItemDataRole.ToolTipRole) or ""
+        )
         return not error
 
     def choose_color(self):
         selected = QColorDialog.getColor(QColor(self._last_valid), self, "Escolher nova cor")
         if selected.isValid():
-            self.target_edit.setText(selected.name(QColor.NameFormat.HexRgb).upper())
+            value = selected.name(QColor.NameFormat.HexRgb).upper()
+            index = self._add_target_color(value, self._color_names.get(value, "Personalizada"))
+        else:
+            index = self.target_combo.findData(self._last_valid)
+        self.target_combo.setCurrentIndex(index)
 
     def accept(self):
         if not self._validate():
-            self.target_edit.setFocus(Qt.FocusReason.OtherFocusReason)
+            self.target_combo.setFocus(Qt.FocusReason.OtherFocusReason)
             return
         super().accept()

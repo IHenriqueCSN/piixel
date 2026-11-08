@@ -504,7 +504,13 @@ class AtelierModule(QWidget):
         self.canvas.finish_stroke()
         if not self.design.counts():
             return
-        dialog = ReplaceColorDialog(self.design, self.color_names, self.canvas.color, self.window())
+        target_colors = dict(COLOR_NAMES)
+        for item in self.preferences.saved_colors():
+            target_colors[item.color] = item.name or COLOR_NAMES.get(item.color, "Personalizada")
+        dialog = ReplaceColorDialog(
+            self.design, self.color_names, self.canvas.color, self.window(),
+            target_colors=target_colors,
+        )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.replace_color(dialog.source_color(), dialog.target_color())
 
