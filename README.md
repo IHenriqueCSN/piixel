@@ -18,6 +18,10 @@ Voltar ao início não salva nem descarta o desenho. Para conservar o trabalho d
 
 Se o arquivo tiver sido movido ou apagado, a miniatura e o caminho anteriores permanecem na lista, e o programa informa: **Arquivo não encontrado. Verifique se o arquivo foi movido ou apagado.** O desenho que já estiver aberto continua preservado. Para localizar um arquivo movido, entre no Ateliê e use **Arquivo → Abrir** com o novo caminho.
 
+Ao abrir um módulo pela primeira vez, uma pequena indicação **Carregando…**, com rodinha animada e o nome da página, aparece sobre a interface. A animação continua durante a preparação da página e desaparece quando ela é exibida, sem uma espera mínima. As páginas já abertas são reutilizadas. Ao voltar ao início, a atualização dos arquivos recentes também recebe essa indicação.
+
+No Piixelfone, ações como abrir conversas, enviar mensagens ou arquivos e regenerar o número mostram o mesmo indicador dentro do módulo. Você pode voltar ao início enquanto a tarefa termina. A sincronização automática em segundo plano permanece discreta, sem cobrir a conversa. Diálogos de confirmação e mensagens de erro continuam acessíveis.
+
 ## Recursos do Ateliê
 
 - Grade de 1 a 128 quadradinhos em cada dimensão.

@@ -10,6 +10,7 @@ import threading
 
 
 _SPLASH_ARGUMENT = "--piixel-startup-splash"
+_PAGE_LOADING_ARGUMENT = "--piixel-page-loading"
 
 
 class _SplashProcess:
@@ -26,12 +27,16 @@ class _SplashProcess:
         return self._closed
 
     @classmethod
-    def launch(cls) -> _SplashProcess:
+    def launch(cls, *, page_loading: dict | None = None) -> _SplashProcess:
         env = os.environ.copy()
+        arguments = [_SPLASH_ARGUMENT]
+        if page_loading is not None:
+            import json
+            arguments = [_PAGE_LOADING_ARGUMENT, json.dumps(page_loading, ensure_ascii=False)]
         if getattr(sys, "frozen", False):
-            command = [sys.executable, _SPLASH_ARGUMENT]
+            command = [sys.executable, *arguments]
         else:
-            command = [sys.executable, "-m", "piixelverso.startup", _SPLASH_ARGUMENT]
+            command = [sys.executable, "-m", "piixelverso.startup", *arguments]
             # A source entry point can be opened from outside the project folder.
             package_root = str(Path(__file__).resolve().parent.parent)
             env["PYTHONPATH"] = os.pathsep.join(
@@ -104,6 +109,18 @@ def main(argv=None) -> int:
     if arguments == [_SPLASH_ARGUMENT]:
         from .splash import run_splash
         return run_splash()
+    if arguments and arguments[0] == _PAGE_LOADING_ARGUMENT:
+        import json
+        if len(arguments) != 2 or len(arguments[1]) > 4096:
+            return 2
+        try:
+            payload = json.loads(arguments[1])
+            if not isinstance(payload, dict):
+                return 2
+        except (ValueError, TypeError):
+            return 2
+        from .splash import run_splash
+        return run_splash(page_loading=payload)
 
     # --help and argument errors should also work without a graphical session.
     parser = argparse.ArgumentParser(description="Piixel — ferramentas do Piixelverso")

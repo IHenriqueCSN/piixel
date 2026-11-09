@@ -84,7 +84,7 @@ def _control_stream():
     return os.fdopen(0, "rb", closefd=False)
 
 
-def run_splash() -> int:
+def run_splash(*, page_loading: dict | None = None) -> int:
     """Animate until the main process closes its pipe, including on failure."""
     finished = threading.Event()
 
@@ -117,7 +117,11 @@ def run_splash() -> int:
         app.setApplicationName("Piixel")
         app.setOrganizationName("Piixelverso")
         app.setQuitOnLastWindowClosed(True)
-        window = create_splash()
+        if page_loading is None:
+            window = create_splash()
+        else:
+            from .ui.loading import create_loading_popup
+            window = create_loading_popup(page_loading)
         if finished.is_set():
             return 0
 

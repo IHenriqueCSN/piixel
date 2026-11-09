@@ -61,6 +61,14 @@ O contrato contém:
 
 Para acrescentar um módulo, implemente esse contrato e registre sua factory junto aos metadados. A rota de arquivos `.pii` continua direcionada ao Ateliê.
 
+## Indicação de carregamento
+
+`loading.py` coordena as aberturas de páginas e a atualização dos recentes. Um overlay é pintado antes do trabalho síncrono; a mesma pequena superfície é animada por um processo auxiliar durante imports e construção dos widgets. Os widgets da aplicação continuam na thread gráfica. O controlador encerra a indicação após a primeira pintura do destino, ou imediatamente em falhas, fechamento e abertura de um diálogo modal. Operações aninhadas compartilham a indicação e callbacks antigos não encerram um carregamento mais recente.
+
+`ui/loading.py` contém a rodinha, o overlay e o card compartilhado. `startup.py` despacha o modo auxiliar tanto pelo código-fonte quanto pelo executável empacotado; `splash.py` compartilha o monitoramento do pipe. Fechar o pipe encerra o auxiliar, inclusive se o processo principal falhar; a limpeza ocorre sem esperar na thread gráfica. O popup não solicita foco nem usa a opção global de ficar acima de todas as janelas. Em plataformas sem superfície gráfica nativa, a indicação local continua disponível.
+
+No Piixelfone, as ações explícitas já executam em uma thread de trabalho; o overlay usa o próprio event loop da interface. A página é reabilitada e a animação para tanto em sucesso quanto em erro. A sincronização periódica não abre overlay. Os diálogos de arquivo são exibidos antes do início da ação, e a navegação para outros módulos continua disponível.
+
 ## Persistência e compatibilidade
 
 O Piixelfone fica isolado em `piixelfone/`. `page.py` constrói a interface e envia operações para uma única fila em uma thread de trabalho; um timer solicita sincronização sem sobrepor operações. Navegar para outro módulo mantém a sessão conectada. O encerramento interrompe novas tarefas e não espera por chamadas de rede na thread gráfica.

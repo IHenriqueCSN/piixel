@@ -13,6 +13,7 @@ from .brand import app_icon, ensure_fonts
 from .home import HomePage
 from .modules import MODULES
 from .module_api import ModulePage
+from .loading import PageLoadingController
 from .format import DesignFormatError, load_design
 from .model import PixelDesign
 from .preferences import PreferencesError, PreferencesStore
@@ -66,6 +67,7 @@ class MainWindow(QMainWindow):
         self.settings_action.setToolTip("Abrir Configurações (Ctrl+,)")
         self.settings_action.triggered.connect(lambda: self.open_module("settings"))
         self.addAction(self.settings_action)
+        self.loading = PageLoadingController(self)
         self.show_home()
         if self.preferences.load_error:
             QTimer.singleShot(0, self._show_preferences_load_error)
@@ -97,6 +99,13 @@ class MainWindow(QMainWindow):
             self.setWindowTitle(module.windowTitle())
 
     def open_module(self, module_id: str) -> ModulePage:
+        if module_id not in self._definitions or module_id not in self._factories:
+            raise ValueError(f"Módulo desconhecido: {module_id}")
+        title = self._definitions[module_id].title
+        with self.loading.operation(f"Carregando {title}…", enabled=module_id not in self.module_pages):
+            return self._activate_module(module_id)
+
+    def _activate_module(self, module_id: str) -> ModulePage:
         module = self._get_module(module_id)
         if self.current_module and self.current_module != module_id:
             previous = self.module_pages[self.current_module]
@@ -117,6 +126,10 @@ class MainWindow(QMainWindow):
             self.module_pages[module_id].focus_default()
 
     def show_home(self):
+        with self.loading.operation("Carregando a tela inicial…"):
+            self._show_home()
+
+    def _show_home(self):
         if self.current_module:
             module_id = self.current_module
             module = self.module_pages[module_id]
@@ -136,7 +149,12 @@ class MainWindow(QMainWindow):
             self.home_page.focus_default_module()
 
     def open_design_path(self, path: str | Path) -> bool:
-        module = self._get_module("atelier")
+        cold = "atelier" not in self.module_pages
+        with self.loading.operation("Carregando Ateliê…", enabled=cold):
+            module = self._get_module("atelier")
+        if cold:
+            # load_path may ask to save/discard or report a missing file.
+            self.loading.close()
         if not module.load_path(path):
             return False
         self.open_module("atelier")
@@ -184,6 +202,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Preferências", self.preferences.load_error)
 
     def closeEvent(self, event):
+        self.loading.close()
         # A hidden page may still own an unsaved document.
         for module in self.module_pages.values():
             if not module.confirm_close():

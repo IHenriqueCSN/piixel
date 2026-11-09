@@ -21,6 +21,7 @@ from ..brand import svg_pixmap
 from ..module_api import ModulePage
 from ..preferences import PreferencesStore
 from ..theme import BORDER, CREAM, INK, LIGHT_PINK, MUTED, PALE_BLUE, WHITE
+from ..ui.loading import LoadingOverlay
 
 
 SETUP_MESSAGE = (
@@ -153,6 +154,8 @@ class PiixelfoneModule(ModulePage):
         self._snapshot: dict = {"contacts": [], "messages": [], "number": ""}
         self._rendered_messages = None
         self._sending_text = ""
+        self._loading_page: QWidget | None = None
+        self._loading_focus: QWidget | None = None
         self.setObjectName("piixelfoneModule")
         self.setWindowTitle("Piixel — Piixelfone")
         self.setStyleSheet(STYLE)
@@ -203,6 +206,7 @@ class PiixelfoneModule(ModulePage):
         self.stage.addWidget(self._build_unlock())
         self.stage.addWidget(self._build_chat())
         root.addWidget(self.stage, 1)
+        self.loading_overlay = LoadingOverlay(self.stage)
         self.status_label = _label("", "phoneStatus")
         self.status_label.setContentsMargins(28, 7, 28, 8)
         self.status_label.setMinimumHeight(32)
@@ -465,22 +469,48 @@ class PiixelfoneModule(ModulePage):
         if self._busy or self._closed:
             return False
         self._busy = True
-        self.status_label.setText({
-            "configure": "Salvando conexão…", "unlock": "Abrindo seu Piixelfone…",
+        message = {
+            "configure": "Salvando conexão…", "unlock": "Abrindo suas conversas…",
             "sync": "Sincronizando…", "save_attachment": "Salvando arquivo…",
             "regenerate_number": "Gerando um novo número…",
-        }.get(name, "Aguarde…"))
+            "request_contact": "Enviando convite…", "accept_contact": "Aceitando convite…",
+            "decline_contact": "Recusando convite…", "send_text": "Enviando mensagem…",
+            "send_file": "Enviando arquivo…",
+        }.get(name, "Carregando…")
+        self.status_label.setText(message)
+        if name != "sync":
+            # Polling is deliberately quiet. Explicit actions cover only this
+            # module's body, leaving navigation back to the other modules free.
+            self._loading_page = self.stage.currentWidget()
+            self._loading_focus = QApplication.focusWidget()
+            self._loading_page.setEnabled(False)
+            self.loading_overlay.show_loading(message)
         self._update_controls()
         self._worker.submit(name, *args)
         return True
+
+    def _finish_loading(self) -> QWidget | None:
+        self.loading_overlay.hide_loading()
+        page, focus = self._loading_page, self._loading_focus
+        self._loading_page = self._loading_focus = None
+        if page is not None:
+            page.setEnabled(True)
+        if (page is self.stage.currentWidget() and focus is not None
+                and page is not None and page.isAncestorOf(focus)):
+            return focus
+        return None
 
     def _completed(self, name: str, result, error) -> None:
         if self._closed:
             return
         self._busy = False
+        restore_focus = self._finish_loading()
         if error:
             self.status_label.setText(str(error))
             self._update_controls()
+            if (restore_focus is not None and restore_focus.isVisible()
+                    and self._active and self.isVisible()):
+                restore_focus.setFocus(Qt.FocusReason.OtherFocusReason)
             return
         if name == "configure":
             self._show_unlock()
@@ -500,6 +530,9 @@ class PiixelfoneModule(ModulePage):
             if name == "request_contact":
                 self.number_input.clear()
         self._update_controls()
+        if (restore_focus is not None and restore_focus.isVisible()
+                and self._active and self.isVisible()):
+            restore_focus.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _apply_snapshot(self, snapshot: dict) -> None:
         self._snapshot = snapshot
@@ -741,4 +774,5 @@ class PiixelfoneModule(ModulePage):
         if not self._closed:
             self._closed = True
             self.poll_timer.stop()
+            self._finish_loading()
             self._worker.stop()
