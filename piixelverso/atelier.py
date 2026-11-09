@@ -75,6 +75,7 @@ class AtelierModule(ModulePage):
         self.resize(1380, 900)
         self._swatches = {}
         self._custom_colors: list[str] = []
+        self._recent_colors: list[str] = []
         self._counts_timer = QTimer(self)
         self._counts_timer.setSingleShot(True)
         self._counts_timer.timeout.connect(self.refresh_counts)
@@ -120,6 +121,7 @@ class AtelierModule(ModulePage):
         self.view.color_selected.connect(self.select_color)
         self.view.color_picked.connect(self.pick_color)
         self.view.color_context_requested.connect(self._show_color_menu)
+        self.view.recent_color_selected.connect(self.select_recent_color)
         self.canvas.changed.connect(self._canvas_changed)
         self.canvas.stroke_finished.connect(self._commit_stroke)
         self.canvas.color_picked.connect(self.pick_color)
@@ -143,9 +145,11 @@ class AtelierModule(ModulePage):
             select_tool=self.select_tool,
             set_shape_fill=self.set_shape_fill,
             icon_factory=icon,
+            select_recent_color=self.select_recent_color,
         )
         self.command_actions = self._actions.commands
         self.tool_action_group = self._actions.tool_group
+        self.recent_color_actions = self._actions.recent_color_actions
 
     def _add_swatch(self, color, name, index):
         self.view.add_swatch(color, name, index)
@@ -191,7 +195,27 @@ class AtelierModule(ModulePage):
             self._active and self.canvas.tool in ("rectangle", "ellipse")
         )
 
-    def select_color(self, color):
+    @property
+    def recent_colors(self) -> tuple[str, ...]:
+        """Session colors; selecting a recent slot keeps its number stable."""
+        return tuple(self._recent_colors)
+
+    def select_recent_color(self, index: int):
+        if not self._active or not 0 <= index < len(self._recent_colors):
+            return
+        # A keyboard change during a gesture starts the next gesture in the new
+        # color instead of changing the color of an unfinished geometric preview.
+        self.canvas.finish_stroke()
+        self.select_color(self._recent_colors[index], remember=False)
+
+    def _sync_recent_color_actions(self):
+        for index, action in enumerate(self.recent_color_actions):
+            action.setEnabled(self._active and index < len(self._recent_colors))
+
+    def select_color(self, color, *, remember=True):
+        color = color.upper()
+        if remember:
+            self._recent_colors = [color] + [value for value in self._recent_colors if value != color][:8]
         self.canvas.color = color.upper()
         self.active_hex.setText(color.upper())
         name = self._custom_color_names.get(color.upper(), "")
@@ -202,6 +226,8 @@ class AtelierModule(ModulePage):
         for value, swatch in self._swatches.items():
             border = f"2px solid {INK}" if value == color.upper() else f"1px solid {BORDER}"
             swatch.setStyleSheet(f"QPushButton {{ background: {value}; border: {border}; border-radius: 5px; }} QPushButton:hover {{ border: 2px solid {PINK}; }}")
+        self.recent_colors_widget.set_colors(self._recent_colors, self.canvas.color)
+        self._sync_recent_color_actions()
 
     def pick_color(self, color):
         self.select_color(color)
@@ -369,6 +395,7 @@ class AtelierModule(ModulePage):
         self._active = bool(active)
         for action in self.command_actions.values():
             action.setEnabled(self._active)
+        self._sync_recent_color_actions()
         self._history_changed()
 
     def _history_changed(self, *args):

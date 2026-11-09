@@ -37,6 +37,7 @@ A identidade do documento é preservada durante redimensionamentos. Isso permite
 - `editor/view.py` constrói os widgets e emite intenções como selecionar uma cor ou confirmar a edição do nome. Recebe as ações compartilhadas para os menus e a barra.
 - `editor/actions.py` centraliza textos, ícones, atalhos e grupos exclusivos de ferramentas. Menus e botões usam as mesmas instâncias de `QAction`.
 - `editor/palette.py` contém a paleta inicial, sem dependências de interface.
+- `editor/recent_colors.py` apresenta nove amostras numeradas. A ordem das cores recentes pertence ao coordenador do Ateliê; selecionar um atalho mantém essa ordem, sem alterar o documento ou as preferências salvas.
 - `editor/new_design_dialog.py` contém o diálogo de novo design.
 - `ui/icons.py` e `ui/widgets.py` fornecem recursos visuais compartilhados, sem depender do Ateliê.
 - `atelier.py` conecta a view, a sessão e os fluxos de interação, como diálogos de abrir, salvar, exportar e escolher cores. Ele mantém os acessos existentes a `design`, `file_path`, `history` e aos widgets usados pela interface e pelos testes.

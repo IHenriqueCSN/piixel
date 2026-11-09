@@ -55,6 +55,7 @@ class EditorActions:
         self, parent: QWidget, *, handlers: Mapping[str, Callable[[], None]],
         select_tool: Callable[[str], None], set_shape_fill: Callable[[bool], None],
         icon_factory: Callable[[str], QIcon] | None = None,
+        select_recent_color: Callable[[int], None] | None = None,
     ):
         if icon_factory is None:
             from ..ui.icons import icon
@@ -100,3 +101,16 @@ class EditorActions:
             self.commands[key] = action
             parent.addAction(action)
         self.commands["pencil"].setChecked(True)
+        self.recent_color_actions: list[QAction] = []
+        if select_recent_color is not None:
+            for index in range(9):
+                action = QAction(f"Cor recente {index + 1}", parent)
+                action.setObjectName(f"action_recent_color_{index + 1}")
+                action.setShortcut(QKeySequence(str(index + 1)))
+                action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+                action.setEnabled(False)
+                action.triggered.connect(
+                    lambda _checked=False, slot=index: select_recent_color(slot)
+                )
+                parent.addAction(action)
+                self.recent_color_actions.append(action)

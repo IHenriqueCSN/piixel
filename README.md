@@ -26,6 +26,7 @@ Se o arquivo tiver sido movido ou apagado, a miniatura e o caminho anteriores pe
 - Linha reta, retângulo e elipse, com prévia, cancelamento e preenchimento opcional das formas.
 - Substituição de uma cor em todo o desenho, com prévia da quantidade de peças afetadas.
 - Paleta inicial e cores personalizadas da sessão, com opção de salvar cores nomeadas para próximas sessões.
+- Nove cores recentes com atalhos de 1 a 9 e amostras numeradas na paleta.
 - Contagem por cor e total de peças; espaços vazios não entram na contagem.
 - Desfazer, refazer e zoom da grade.
 - Exibição em quadradinhos ou em rosquinhas estilo hama beads.
@@ -182,6 +183,14 @@ Abra **Configurações** na tela inicial, por **Arquivo → Configurações** no
 
 A configuração permanece entre sessões e é usada nas próximas exportações de PNG. Ela fica nas preferências locais do usuário. Voltar ao Ateliê preserva o desenho, as cores, o histórico e o arquivo aberto.
 
+## Cores recentes e atalhos
+
+No Ateliê, a seção **Recentes · teclas 1–9**, acima da paleta, reúne até nove cores selecionadas nesta sessão. Pressione **1** a **9** para ativar a amostra com esse número, ou clique nela. Os números ficam legíveis tanto em cores claras quanto escuras; a cor ativa tem uma borda de destaque.
+
+Escolher uma cor na paleta, nas peças do desenho, na contagem ou no seletor de cor personalizada a coloca no início da lista, sem duplicatas. Alternar pelos atalhos ou pelas próprias amostras recentes mantém a ordem: assim, você pode trocar entre **1** e **2** sem que as posições mudem. Posições ainda vazias ficam desabilitadas.
+
+As cores recentes acompanham a sessão ao voltar ao início ou abrir outro design, e ficam sempre visíveis mesmo ao rolar a paleta. A lista recomeça ao fechar o programa; ela não salva cores personalizadas para próximas sessões. Para isso, use a opção explícita descrita abaixo. Os atalhos funcionam apenas no Ateliê e preservam a ferramenta atual. Ao digitar em campos ou diálogos, os números continuam sendo texto.
+
 ## Cores personalizadas
 
 Em **Editar → Cor personalizada**, informe um hexadecimal `#RRGGBB` ou use **Escolher cor**. Ao confirmar **Adicionar cor**, ela aparece na paleta e fica disponível durante a sessão, inclusive ao voltar ao início e retornar ao Ateliê.
@@ -219,6 +228,7 @@ Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto 
 | Balde de tinta | G |
 | Borracha | E |
 | Conta-gotas | I |
+| Selecionar uma cor recente | 1 a 9 |
 | Linha reta | L |
 | Retângulo | R |
 | Elipse | O |

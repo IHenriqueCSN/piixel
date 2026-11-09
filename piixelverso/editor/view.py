@@ -13,6 +13,7 @@ from ..commands import EditorCommandBar
 from ..counts import ColorCountsView
 from ..ui.widgets import label
 from .palette import PALETTE
+from .recent_colors import RecentColorsWidget
 
 
 # Explicit facade fields retained by AtelierModule for its existing public UI API.
@@ -22,6 +23,7 @@ VIEW_ATTRIBUTES = (
     "palette_scroll", "palette_grid", "active_swatch", "active_hex",
     "active_color_name", "canvas", "viewport", "position_label", "dimensions",
     "canvas_view_label", "total_label", "color_total", "empty_total", "count_view",
+    "recent_colors_widget",
 )
 
 
@@ -31,6 +33,7 @@ class AtelierView(QWidget):
     color_selected = Signal(str)
     color_picked = Signal(str)
     color_context_requested = Signal(str, object)
+    recent_color_selected = Signal(int)
 
     def __init__(self, design, color_names, command_actions, parent=None):
         super().__init__(parent)
@@ -118,6 +121,14 @@ class AtelierView(QWidget):
         pane.setFixedWidth(215)
         outer = QVBoxLayout(pane)
         outer.setContentsMargins(1, 1, 1, 1)
+        outer.setSpacing(0)
+        recent_panel = QWidget()
+        recent_layout = QVBoxLayout(recent_panel)
+        recent_layout.setContentsMargins(16, 14, 16, 8)
+        self.recent_colors_widget = RecentColorsWidget(self.color_names)
+        self.recent_colors_widget.color_selected.connect(self.recent_color_selected.emit)
+        recent_layout.addWidget(self.recent_colors_widget)
+        outer.addWidget(recent_panel)
         scroll = QScrollArea()
         self.palette_scroll = scroll
         scroll.setWidgetResizable(True)
@@ -161,7 +172,7 @@ class AtelierView(QWidget):
         tip.setWordWrap(True)
         contents.addWidget(tip)
         scroll.setWidget(body)
-        outer.addWidget(scroll)
+        outer.addWidget(scroll, 1)
         return pane
 
     def add_swatch(self, color, name, index):
