@@ -263,7 +263,7 @@ class WindowsUpdateLaunchTests(unittest.TestCase):
             encoded = command[command.index("-EncodedCommand") + 1]
             script = base64.b64decode(encoded).decode("utf-16le")
             self.assertIn(f"Wait-Process -Id {os.getpid()}", script)
-            self.assertIn(str(installer), script)
+            self.assertIn(str(installer.resolve()), script)
             self.assertIn("/SILENT", script)
             self.assertIn("Start-Process -FilePath $restart", script)
             self.assertEqual(popen.call_args.kwargs["creationflags"], 7)
