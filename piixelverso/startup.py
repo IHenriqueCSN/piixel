@@ -7,10 +7,43 @@ from pathlib import Path
 import subprocess
 import sys
 import threading
+from contextlib import contextmanager
 
 
 _SPLASH_ARGUMENT = "--piixel-startup-splash"
 _PAGE_LOADING_ARGUMENT = "--piixel-page-loading"
+_INSTALLER_MUTEX = "Piixel.Piixelverso.Desktop"
+
+
+@contextmanager
+def _installer_mutex():
+    """Let the per-user Windows installer ask to close a running application.
+
+    This does not impose a single-instance policy. The native handle simply
+    remains open while this process runs; helper processes do not acquire it.
+    """
+    kernel = None
+    handle = None
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            from ctypes import wintypes
+            kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+            kernel.CreateMutexW.restype = wintypes.HANDLE
+            kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+            kernel.CloseHandle.restype = wintypes.BOOL
+            handle = kernel.CreateMutexW(None, False, _INSTALLER_MUTEX)
+        except (OSError, AttributeError):
+            kernel = None
+    try:
+        yield
+    finally:
+        if kernel is not None and handle:
+            try:
+                kernel.CloseHandle(handle)
+            except OSError:
+                pass
 
 
 class _SplashProcess:
@@ -126,12 +159,13 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Piixel — ferramentas do Piixelverso")
     parser.add_argument("design", nargs="?", help="Arquivo .pii para abrir diretamente no Ateliê")
     parser.parse_args(arguments)
-    splash = _SplashProcess.launch()
-    try:
-        from .app import main as run_application
-        return run_application(arguments, startup=splash)
-    finally:
-        splash.close()
+    with _installer_mutex():
+        splash = _SplashProcess.launch()
+        try:
+            from .app import main as run_application
+            return run_application(arguments, startup=splash)
+        finally:
+            splash.close()
 
 
 if __name__ == "__main__":

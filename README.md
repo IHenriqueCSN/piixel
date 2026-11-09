@@ -282,7 +282,11 @@ python scripts/build.py
 
 O resultado fica em `dist/`. O build usa o modo `onedir`: distribua a pasta inteira gerada, com o executável e suas dependências. No Windows, a pasta `Piixel` contém `Piixel.exe`; no macOS, o PyInstaller pode gerar o pacote `.app`. Quem usar esse pacote não precisa instalar Python separadamente.
 
-Esta etapa gera o aplicativo para distribuição local. Assinatura digital, notarização e um instalador assistido poderão ser preparados depois, conforme o sistema escolhido.
+Para Windows 10/11 de 64 bits, o projeto também inclui um **instalador assistido** com atalho no menu Iniciar, opção de atalho na área de trabalho e desinstalação pelo Windows. Ele instala para o usuário atual, inclui Python e todas as dependências e preserva designs e dados pessoais ao desinstalar.
+
+O [workflow Instalador Windows](https://github.com/IHenriqueCSN/piixel/actions/workflows/windows-installer.yml) gera o `.exe` em um computador Windows do GitHub. Abra uma execução concluída com sucesso e baixe **Artifacts → Piixel-Windows-x64**; extraia o ZIP e execute o arquivo `Piixel-Setup-0.1.0-x64.exe`. O número acompanha a versão do projeto. Esse artifact contém o instalador compilado; o ZIP do código-fonte continua disponível separadamente.
+
+Para gerar o instalador localmente com Inno Setup 6, siga o [guia do instalador Windows](docs/instalador-windows.md). O workflow também verifica instalação, abertura de um design no aplicativo instalado e desinstalação sem remover os dados de teste. Assinatura digital e notarização não fazem parte desta geração.
 
 ## Organização
 

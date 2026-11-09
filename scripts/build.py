@@ -30,9 +30,12 @@ def main() -> int:
         "--noconfirm",
         "--clean",
         "--windowed",
+        "--noupx",
         "--name",
         "Piixel",
         "--onedir",
+        "--contents-directory",
+        "_internal",
         "--distpath",
         str(root / "dist"),
         "--workpath",
@@ -41,8 +44,16 @@ def main() -> int:
         str(root / "build"),
         "--add-data",
         f"{root / 'piixelverso' / 'assets'}{os.pathsep}piixelverso/assets",
-        str(entry_point),
     ]
+    if sys.platform == "win32":
+        # The script can run both as a module in checks and directly from a ZIP.
+        if __package__:
+            from .windows_assets import create_windows_assets
+        else:
+            from windows_assets import create_windows_assets
+        assets = create_windows_assets(root)
+        command.extend(["--icon", str(assets["icon"]), "--version-file", str(assets["version_file"])])
+    command.append(str(entry_point))
     try:
         subprocess.run(command, cwd=root, check=True)
     except subprocess.CalledProcessError as exc:
