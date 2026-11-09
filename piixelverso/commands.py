@@ -67,6 +67,8 @@ class EditorCommandBar(QWidget):
         for name in ("undo", "redo"):
             self.menus["edit"].addAction(commands[name])
         self.menus["edit"].addSeparator()
+        self.menus["edit"].addAction(commands["resize_canvas"])
+        self.menus["edit"].addSeparator()
         for name in ("pencil", "bucket", "eraser", "picker"):
             self.menus["edit"].addAction(commands[name])
         self.menus["edit"].addSeparator()

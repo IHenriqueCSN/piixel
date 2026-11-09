@@ -21,6 +21,7 @@ Se o arquivo tiver sido movido ou apagado, a miniatura e o caminho anteriores pe
 ## Recursos do Ateliê
 
 - Grade de 1 a 128 quadradinhos em cada dimensão.
+- Redimensionamento da prancheta entre 10 e 128 células por eixo, preservando as peças e o histórico.
 - Lápis, balde de tinta, borracha e conta-gotas para capturar cores já usadas.
 - Substituição de uma cor em todo o desenho, com prévia da quantidade de peças afetadas.
 - Paleta inicial e cores personalizadas da sessão, com opção de salvar cores nomeadas para próximas sessões.
@@ -108,6 +109,18 @@ Em **Exibir → Peças**, alterne entre **Quadradinhos** e **Rosquinhas (hama be
 
 Clique no nome para renomear o design. A lista de cores à direita também permite selecionar uma cor já usada. Abra `examples/cogumelo-do-bosque.pii` para experimentar o editor com um desenho pronto.
 
+## Redimensionar a prancheta
+
+No Ateliê, use **Editar → Redimensionar prancheta…** ou **Ctrl+Alt+C**. Defina a largura e a altura de forma independente, de **10 a 128 células** por dimensão. Por exemplo, é possível usar uma prancheta de **64 × 32**, **10 × 10** ou **128 × 128**.
+
+Em **Posição do desenho**, escolha como manter as peças na nova área. O padrão é **Centro**; as outras opções permitem alinhar o desenho às bordas ou aos cantos. As peças mantêm seu tamanho e suas cores. Ampliar acrescenta células vazias; reduzir recorta apenas o que ficar fora da nova prancheta.
+
+![Redimensionar a prancheta com escolha de posição e aviso de recorte](docs/previa-redimensionar.png)
+
+O diálogo mostra quantas peças seriam cortadas. Se houver peças fora dos novos limites, o aplicativo pede confirmação antes de aplicar a redução. **Desfazer** restaura as dimensões anteriores e as peças cortadas; **Refazer** reaplica a alteração. A ferramenta, a cor ativa, o zoom e a exibição em quadradinhos ou rosquinhas são preservados.
+
+Salve o `.pii` para conservar as novas dimensões entre sessões. Designs antigos menores que 10 células continuam abrindo normalmente e podem ser ampliados pelo mesmo comando.
+
 ## Exportar como PNG
 
 No Ateliê, use **Arquivo → Exportar como PNG…** ou **Ctrl+Shift+E**. Escolha **Quadradinhos** ou **Rosquinhas (hama beads)** e marque **Mostrar grade** se quiser incluir as linhas. A prévia mostra o resultado antes de gravar a imagem; essas escolhas valem para a exportação e preservam a visualização atual do editor.
@@ -145,7 +158,7 @@ A lista de recentes, as cores que você escolheu guardar e o tamanho configurado
 A barra compacta no topo reúne menus tradicionais e ícones das ferramentas mais usadas. Os menus abrem somente quando acionados, deixando mais espaço para a prancheta:
 
 - **Arquivo**: novo design, abrir, salvar, salvar como, exportar PNG, tela inicial e Configurações.
-- **Editar**: desfazer/refazer, lápis, balde de tinta, borracha, conta-gotas, substituir cor e cor personalizada.
+- **Editar**: desfazer/refazer, redimensionar prancheta, lápis, balde de tinta, borracha, conta-gotas, substituir cor e cor personalizada.
 - **Exibir**: formato das peças, grade, zoom e ajustar à janela.
 
 Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto você desenha, sem precisar abrir os menus. No Windows e Linux:
@@ -157,6 +170,7 @@ Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto 
 | Salvar | Ctrl+S |
 | Salvar como | Ctrl+Shift+S |
 | Exportar como PNG | Ctrl+Shift+E |
+| Redimensionar prancheta | Ctrl+Alt+C |
 | Abrir Configurações | Ctrl+, |
 | Desfazer | Ctrl+Z |
 | Refazer | Ctrl+Y ou Ctrl+Shift+Z |
@@ -228,6 +242,8 @@ Esta etapa gera o aplicativo para distribuição local. Assinatura digital, nota
 - `piixelverso/png_export.py`: desenho e gravação atômica do PNG com medidas.
 - `piixelverso/export_dialog.py`: escolha da aparência e prévia da imagem exportada.
 - `piixelverso/settings.py`: módulo de configuração do tamanho das peças.
+- `piixelverso/resize.py`: cálculo do redimensionamento, posicionamento e recorte de peças.
+- `piixelverso/resize_dialog.py`: escolha das dimensões e aviso de peças fora dos novos limites.
 - `tests/`: verificações do editor e do formato.
 - `run_piixelverso.py`: entrada usada no empacotamento.
 - `scripts/build.py`: geração do aplicativo pelo PyInstaller.

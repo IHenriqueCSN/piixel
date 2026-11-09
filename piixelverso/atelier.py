@@ -21,6 +21,8 @@ from .operations import replace_color_changes
 from .replace import ReplaceColorDialog
 from .export_dialog import ExportPngDialog
 from .png_export import save_png
+from .resize import count_cropped_pixels, resized_design
+from .resize_dialog import ResizeCanvasDialog
 from .colors import CustomColorDialog
 from .preferences import PreferencesError, PreferencesStore
 from .commands import EditorCommandBar
@@ -157,6 +159,26 @@ class RenameCommand(QUndoCommand):
     def undo(self):
         self.window.design.name = self.before
         self.window.refresh_design()
+
+
+class ResizeCanvasCommand(QUndoCommand):
+    def __init__(self, window, before: PixelDesign, after: PixelDesign):
+        super().__init__("Redimensionar prancheta")
+        self.window, self.before, self.after = window, before, after
+
+    def apply(self, snapshot):
+        # Preserve the document identity used by earlier painting commands.
+        design = self.window.design
+        design.width, design.height = snapshot.width, snapshot.height
+        design.pixels = list(snapshot.pixels)
+        self.window.canvas.set_design(design)
+        self.window.refresh_design()
+
+    def redo(self):
+        self.apply(self.after)
+
+    def undo(self):
+        self.apply(self.before)
 
 
 class NewDesignDialog(QDialog):
@@ -449,6 +471,7 @@ class AtelierModule(QWidget):
             ("save", "Salvar", "save", self.save, standard.Save),
             ("save_as", "Salvar como", "save_as", self.save_as, standard.SaveAs),
             ("export_png", "Exportar como PNG…", "export_png", self.export_png, "Ctrl+Shift+E"),
+            ("resize_canvas", "Redimensionar prancheta…", "fit", self.show_resize_canvas_dialog, "Ctrl+Alt+C"),
             ("undo", "Desfazer", "undo", self.undo, standard.Undo),
             ("redo", "Refazer", "redo", self.redo, standard.Redo),
             ("pencil", "Lápis", "pencil", lambda: self.select_tool("pencil"), "B"),
@@ -764,6 +787,38 @@ class AtelierModule(QWidget):
             return
         self._replace_design(PixelDesign(dialog.width_input.value(), dialog.height_input.value(),
                                         name=dialog.name.text().strip() or "Sem título"))
+
+    def show_resize_canvas_dialog(self):
+        self.rename_design()
+        self.canvas.finish_stroke()
+        dialog = ResizeCanvasDialog(self.design, parent=self.window())
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return False
+        width, height, anchor = dialog.target_width(), dialog.target_height(), dialog.anchor()
+        cropped = count_cropped_pixels(self.design, width, height, anchor)
+        if cropped:
+            message = (
+                "A redução removerá 1 peça que ficará fora da prancheta."
+                if cropped == 1 else f"A redução removerá {cropped} peças que ficarão fora da prancheta."
+            )
+            answer = QMessageBox.question(
+                self.window(), "Reduzir a prancheta?",
+                message + "\n\nDeseja continuar? Você poderá desfazer essa alteração.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return False
+        return self.resize_canvas(width, height, anchor)
+
+    def resize_canvas(self, width: int, height: int, anchor: str = "center") -> bool:
+        after = resized_design(self.design, width, height, anchor)
+        if (width, height) == (self.design.width, self.design.height):
+            return False
+        self.rename_design()
+        self.canvas.finish_stroke()
+        self.history.push(ResizeCanvasCommand(self, self.design.clone(), after))
+        return True
 
     def open_design(self):
         path, _ = QFileDialog.getOpenFileName(self.window(), "Abrir design", "", "Design Piixelverso (*.pii)")
