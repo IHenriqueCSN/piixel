@@ -189,6 +189,8 @@ class MainWindow(QMainWindow):
             if not module.confirm_close():
                 event.ignore()
                 return
+        for module in self.module_pages.values():
+            module.shutdown()
         event.accept()
 
 

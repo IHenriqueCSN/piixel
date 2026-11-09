@@ -17,7 +17,7 @@ if not exist ".venv\Scripts\python.exe" (
     if errorlevel 1 goto :failed
 )
 
-".venv\Scripts\python.exe" -c "from importlib.util import find_spec; raise SystemExit(0 if find_spec('PySide6') else 1)" >nul 2>&1
+".venv\Scripts\python.exe" -c "from importlib.util import find_spec; raise SystemExit(0 if find_spec('PySide6') and find_spec('nacl') else 1)" >nul 2>&1
 if errorlevel 1 (
     echo Instalando os componentes do Piixelverso. A primeira execução precisa de internet.
     ".venv\Scripts\python.exe" -m pip install -r requirements.txt

@@ -1,6 +1,6 @@
 # Piixel · ferramentas do Piixelverso
 
-Piixel é um aplicativo desktop do Piixelverso, organizado em módulos. A tela inicial oferece o **Ateliê**, para criar pixel arts e contar as peças por cor, e **Configurações**, para definir o tamanho de cada peça nas imagens exportadas. A interface usa Python e Qt (PySide6), e os designs ficam em arquivos locais `.pii`.
+Piixel é um aplicativo desktop do Piixelverso, organizado em módulos. A tela inicial oferece o **Ateliê**, para criar pixel arts e contar as peças por cor, o **Piixelfone**, para conversar e compartilhar designs com criptografia de ponta a ponta, e **Configurações**, para definir o tamanho das peças nas imagens exportadas. A interface usa Python e Qt (PySide6), e os designs ficam em arquivos locais `.pii`.
 
 Ao iniciar, uma pequena tela com o Pii mostra **Carregando…**, uma barra de atividade animada e **Desenvolvido por Piixelverso**. Ela abre antes de carregar o editor e fecha automaticamente assim que a janela principal aparece, sem uma espera mínima. A animação continua funcionando durante a inicialização.
 
@@ -35,6 +35,34 @@ Se o arquivo tiver sido movido ou apagado, a miniatura e o caminho anteriores pe
 - Configuração persistente do tamanho de cada peça, com padrão de 5 mm.
 
 A contagem é a base para controlar materiais e calcular preços. Esta versão ainda não mantém um cadastro de estoque, custos, margens ou preços de venda.
+
+## Piixelfone
+
+Abra **Piixelfone** na tela inicial. No primeiro acesso, o aplicativo pede a chave pública de conexão e orienta a contatar o administrador do sistema. A URL do projeto já vem preenchida; a chave pública é salva neste computador. Use somente a chave **Publishable** ou **anon public**, nunca uma chave administrativa.
+
+O administrador precisa preparar o projeto Supabase uma vez, seguindo [a instalação do servidor](docs/PIIXELFONE_SERVIDOR.md). Apenas preencher a chave não instala as tabelas nem habilita a autenticação. O Ateliê continua disponível sem configurar o chat.
+
+![Configuração inicial do Piixelfone](docs/previa-piixelfone-conexao.png)
+
+Depois de salvar a conexão, crie uma **senha local com pelo menos oito caracteres**. Ela protege suas chaves e conversas neste computador e não é enviada ao servidor. Ao reabrir o aplicativo, desbloqueie o Piixelfone com essa senha. Seu número tem seis dígitos, como **584 093**.
+
+1. Digite o número da outra pessoa em **Adicionar contato** e envie o convite.
+2. A outra pessoa aceita a solicitação na própria tela. Só então a conversa fica disponível.
+3. Use **Verificar contato** para conferir os códigos das chaves por ligação ou pessoalmente. O código da sua própria chave aparece nos detalhes do diálogo. Essa conferência autentica o primeiro contato; mudanças posteriores de chave são bloqueadas.
+4. Escreva até **150 caracteres** e clique em **Enviar**, ou pressione **Ctrl+Enter**. Use **Anexar .pii** para compartilhar um design válido.
+5. Para guardar um anexo recebido, selecione a mensagem e use **Salvar arquivo .pii**, escolhendo onde gravar.
+
+![Conversa no Piixelfone](docs/previa-piixelfone.png)
+
+O histórico e a fila de saída ficam cifrados no computador. As mensagens mostram **Na fila**, **Enviada** ou **Entregue**. Se você estiver sem conexão, o envio aguarda localmente; se o destinatário estiver offline, o servidor guarda o envelope cifrado até recebê-lo. A confirmação de entrega ocorre depois da gravação local no destinatário. Novas tentativas não duplicam mensagens. Anexos são validados antes do envio e após a decifragem.
+
+O botão **Regenerar número** pede confirmação. O número antigo deixa de aceitar novos convites e não será atribuído a outra pessoa. Contatos, conversas, mensagens pendentes e chaves permanecem vinculados à mesma identidade.
+
+A sincronização consulta o servidor a cada cinco segundos enquanto o Piixel estiver aberto e o Piixelfone desbloqueado, inclusive ao voltar ao Ateliê. Ao fechar o programa, a fila já enviada permanece no servidor; as mensagens chegam quando o módulo for desbloqueado novamente. Não é necessário instalar um serviço de sistema.
+
+A criptografia usa a biblioteca libsodium, por meio do PyNaCl. O servidor vê remetente, destinatário, horários e tamanho dos envelopes; não recebe o texto, o nome ou o conteúdo dos anexos em claro. Esta versão usa chaves estáticas e não oferece sigilo futuro (*forward secrecy*). O protocolo e as limitações estão descritos no [guia do servidor](docs/PIIXELFONE_SERVIDOR.md). As capturas de conversa usam dois clientes locais de teste, com criptografia real e transporte simulado.
+
+Faça backup da pasta de dados `piixelfone` com o aplicativo fechado e guarde sua senha. Sem o arquivo `identity.vault` original e a senha, as chaves e o histórico não podem ser recuperados. O Supabase não mantém uma cópia legível das conversas. Não compartilhe nem versione essa pasta. O caminho é a pasta `piixelfone` ao lado de `preferences.json`, no diretório de dados do usuário; `PIIXEL_DATA_DIR` permite definir outro diretório.
 
 ## Identidade visual
 
@@ -248,7 +276,9 @@ Esta etapa gera o aplicativo para distribuição local. Assinatura digital, nota
 - `piixelverso/app.py`: janela do Piixel e navegação, mantendo os módulos abertos durante a sessão.
 - `piixelverso/startup.py`: entrada leve e encerramento do carregamento na abertura da janela principal.
 - `piixelverso/splash.py`: tela de carregamento com animação independente da inicialização do editor.
-- `piixelverso/modules.py`: cadastro dos módulos disponíveis: Ateliê e Configurações.
+- `piixelverso/modules.py`: cadastro dos módulos disponíveis: Ateliê, Piixelfone e Configurações.
+- `piixelverso/piixelfone/`: interface do chat, casos de uso, transporte, cofre e histórico cifrado.
+- `supabase/piixelfone.sql`: instalação das tabelas privadas, permissões e RPCs do chat.
 - `piixelverso/home.py`: tela inicial.
 - `piixelverso/atelier.py`: coordenação dos fluxos do Ateliê.
 - `piixelverso/editor/`: sessão do documento, histórico, ações, paleta e construção da interface do editor.

@@ -69,6 +69,12 @@ def icon(kind: str, color=INK) -> QIcon:
     elif kind == "fit":
         for x, y, sx, sy in [(4, 4, 1, 1), (20, 4, -1, 1), (4, 20, 1, -1), (20, 20, -1, -1)]:
             p.drawLine(x, y, x + 5 * sx, y); p.drawLine(x, y, x, y + 5 * sy)
+    elif kind == "chat":
+        p.drawRoundedRect(3, 4, 18, 13, 3, 3)
+        p.drawLine(7, 17, 7, 21)
+        p.drawLine(7, 21, 12, 17)
+        p.drawLine(7, 9, 17, 9)
+        p.drawLine(7, 12, 14, 12)
     elif kind == "settings":
         p.drawEllipse(6, 6, 12, 12); p.drawEllipse(10, 10, 4, 4)
         for x, y, ex, ey in [(12, 3, 12, 6), (12, 18, 12, 21), (3, 12, 6, 12),

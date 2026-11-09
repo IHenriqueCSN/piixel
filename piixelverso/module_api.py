@@ -40,6 +40,9 @@ class ModulePage(QWidget):
     def confirm_close(self) -> bool:
         return True
 
+    def shutdown(self) -> None:
+        """Stop background work after every module has accepted closing."""
+
     def attach_navigation(self, home_action: QAction, settings_action: QAction) -> None:
         """Receive application-level navigation actions once, when instantiated."""
         self.home_button.setToolTip("Voltar à tela inicial (Alt+Home)")

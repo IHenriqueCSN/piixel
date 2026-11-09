@@ -16,7 +16,7 @@ if [ ! -x .venv/bin/python ]; then
     python3 -m venv .venv
 fi
 
-if ! .venv/bin/python -c 'from importlib.util import find_spec; raise SystemExit(0 if find_spec("PySide6") else 1)' >/dev/null 2>&1; then
+if ! .venv/bin/python -c 'from importlib.util import find_spec; raise SystemExit(0 if find_spec("PySide6") and find_spec("nacl") else 1)' >/dev/null 2>&1; then
     echo "Instalando os componentes do Piixelverso. A primeira execução precisa de internet."
     .venv/bin/python -m pip install -r requirements.txt
 fi

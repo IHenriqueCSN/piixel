@@ -9,6 +9,11 @@ flowchart TD
     Registry --> Contract["module_api: ModulePage"]
     Contract --> Atelier["atelier: coordenação do editor"]
     Contract --> Settings["settings: configurações"]
+    Contract --> Phone["piixelfone/page: interface e worker"]
+    Phone --> PhoneService["piixelfone/service: casos de uso"]
+    PhoneService --> PhoneStore["store / crypto: histórico e cofre cifrados"]
+    PhoneService --> Transport["transport: HTTPS e autenticação"]
+    Transport --> Supabase["Supabase: RPCs e fila cifrada"]
     Atelier --> View["editor/view: widgets e sinais"]
     Atelier --> Actions["editor/actions: ações e atalhos"]
     Atelier --> Session["editor/session: documento e histórico"]
@@ -50,11 +55,20 @@ O contrato contém:
 - `home_state` para informar opcionalmente o nome e as alterações pendentes exibidos no início.
 - `attach_navigation` para receber as ações globais de início e configurações.
 - `confirm_close` para autorizar o fechamento, inclusive quando o módulo está oculto.
+- `shutdown` para encerrar o trabalho em segundo plano depois que todos os módulos aceitarem o fechamento.
 - `load_path` e o sinal `document_accessed` para módulos que abrem documentos.
 
 Para acrescentar um módulo, implemente esse contrato e registre sua factory junto aos metadados. A rota de arquivos `.pii` continua direcionada ao Ateliê.
 
 ## Persistência e compatibilidade
+
+O Piixelfone fica isolado em `piixelfone/`. `page.py` constrói a interface e envia operações para uma única fila em uma thread de trabalho; um timer solicita sincronização sem sobrepor operações. Navegar para outro módulo mantém a sessão conectada. O encerramento interrompe novas tarefas e não espera por chamadas de rede na thread gráfica.
+
+`service.py` coordena identidade, contatos, criptografia, envio, recebimento e confirmação de entrega, sem depender do Qt. `transport.py` usa HTTPS, bloqueia redirecionamentos, limita tamanhos e apresenta erros sem incluir tokens nem respostas do servidor. `config.py` aceita apenas a chave pública; credenciais administrativas são recusadas.
+
+`crypto.py` usa Box da libsodium para os envelopes e SecretBox para o cofre e os registros locais. Argon2id deriva a chave do cofre a partir da senha local. `store.py` mantém contatos e registros cifrados no SQLite, com conexões por operação e proteção contra troca de chave. Cada envelope vincula criptograficamente o UUID da mensagem, remetente e destinatário. Retransmissões preservam o mesmo UUID e ciphertext; o destinatário grava antes de confirmar ao servidor.
+
+`supabase/piixelfone.sql` mantém tabelas em schema privado, com RLS e sem acesso direto por clientes. RPCs autorizam cada operação pelo JWT autenticado. O conteúdo cifrado permanece até o destinatário confirmar ou recusar; depois disso fica apenas o estado e o hash para preservar a idempotência. Números antigos ficam reservados permanentemente. O [guia de instalação](PIIXELFONE_SERVIDOR.md) descreve a implantação e as limitações criptográficas.
 
 `format.py` continua responsável pelo `.pii` versionado e pela gravação atômica. `preferences.py` continua guardando arquivos recentes, cores salvas e tamanho das peças. `png_export.py` continua renderizando e gravando o PNG com as mesmas medidas, cores e opções.
 

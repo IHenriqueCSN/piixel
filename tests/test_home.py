@@ -75,8 +75,8 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertIs(self.window.pages.currentWidget(), self.window.home_page)
         self.assertTrue(self.window.home_page.isVisible())
         self.assertEqual(self.window.module_pages, {})
-        self.assertEqual(set(self.window.home_page.module_buttons), {"atelier", "settings"})
-        self.assertEqual({definition.id for definition in MODULES}, {"atelier", "settings"})
+        self.assertEqual(set(self.window.home_page.module_buttons), {"atelier", "piixelfone", "settings"})
+        self.assertEqual({definition.id for definition in MODULES}, {"atelier", "piixelfone", "settings"})
         self.assertIn("Piixel", self.window.windowTitle())
         self.assertIn("Início", self.window.windowTitle())
 

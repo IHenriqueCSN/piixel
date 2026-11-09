@@ -30,6 +30,11 @@ def _create_settings(*, parent=None, preferences=None) -> ModulePage:
     return SettingsModule(parent=parent, preferences=preferences)
 
 
+def _create_piixelfone(*, parent=None, preferences=None) -> ModulePage:
+    from .piixelfone.page import PiixelfoneModule
+    return PiixelfoneModule(parent=parent, preferences=preferences)
+
+
 MODULES = (
     ModuleDefinition(
         id="atelier",
@@ -37,6 +42,13 @@ MODULES = (
         description="Crie pixel arts, visualize em hama beads e acompanhe as peças por cor.",
         icon_name="pencil",
         factory=_create_atelier,
+    ),
+    ModuleDefinition(
+        id="piixelfone",
+        title="Piixelfone",
+        description="Converse e compartilhe designs .pii com criptografia de ponta a ponta.",
+        icon_name="chat",
+        factory=_create_piixelfone,
     ),
     ModuleDefinition(
         id="settings",

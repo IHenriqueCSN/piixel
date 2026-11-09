@@ -7,3 +7,7 @@ dist/
 *.spec
 .pytest_cache/
 .DS_Store
+identity.vault
+*.sqlite3
+*.sqlite3-journal
+connection.json

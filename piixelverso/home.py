@@ -158,7 +158,7 @@ class HomePage(QWidget):
 
     def _module_card(self, module: ModuleDefinition, module_icon: QIcon) -> QWidget:
         card = QFrame(objectName="moduleCard")
-        compact = module.id == "settings"
+        compact = module.id in ("settings", "piixelfone")
         card.setMinimumHeight(180 if compact else 250)
         content = QVBoxLayout(card)
         content.setContentsMargins(25, 20 if compact else 24, 25, 20 if compact else 24)
