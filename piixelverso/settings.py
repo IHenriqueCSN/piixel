@@ -31,6 +31,7 @@ class SettingsModule(ModulePage):
     def __init__(self, parent=None, preferences: PreferencesStore | None = None):
         super().__init__(parent)
         self.preferences = preferences if preferences is not None else PreferencesStore()
+        self.updater = None
         self._active = True
         self.setObjectName("settingsModule")
         self.setStyleSheet(SETTINGS_STYLE)
@@ -137,6 +138,27 @@ class SettingsModule(ModulePage):
         self.status_label.setMinimumHeight(20)
         card_layout.addWidget(self.status_label)
         contents.addWidget(card)
+
+        update_card = QFrame(objectName="settingsCard")
+        update_layout = QVBoxLayout(update_card)
+        update_layout.setContentsMargins(28, 26, 28, 26)
+        update_layout.setSpacing(12)
+        update_layout.addWidget(self._label("Atualizações do Piixel", "settingsCardTitle"))
+        update_layout.addWidget(self._label(
+            "Procura novas versões publicadas pelo Piixelverso. Antes de instalar, o programa "
+            "confere o SHA-256 do arquivo baixado.", "settingsNote"
+        ))
+        self.update_button = QPushButton("Verificar atualizações")
+        self.update_button.setObjectName("checkUpdatesButton")
+        self.update_button.setEnabled(False)
+        self.update_button.clicked.connect(self.check_updates)
+        update_layout.addWidget(self.update_button, 0, Qt.AlignmentFlag.AlignLeft)
+        self.update_status_label = self._label(
+            "As informações de atualização ainda não estão disponíveis.", "settingsStatus"
+        )
+        self.update_status_label.setMinimumHeight(20)
+        update_layout.addWidget(self.update_status_label)
+        contents.addWidget(update_card)
         contents.addStretch(1)
         row.addWidget(panel, 1)
         row.addStretch()
@@ -167,6 +189,26 @@ class SettingsModule(ModulePage):
         self._active = bool(active)
         self.piece_size_input.setEnabled(self._active)
         self.save_button.setEnabled(self._active)
+        self._sync_update_button()
+
+    def attach_updater(self, updater) -> None:
+        self.updater = updater
+        self.update_status_label.setText(updater.status_text)
+        updater.status_changed.connect(self.update_status_label.setText)
+        updater.busy_changed.connect(lambda _busy: self._sync_update_button())
+        self._sync_update_button()
+
+    def _sync_update_button(self):
+        enabled = bool(
+            self._active and self.updater is not None and self.updater.supported
+            and not self.updater.busy
+        )
+        self.update_button.setEnabled(enabled)
+
+    def check_updates(self):
+        if self.updater is not None:
+            return self.updater.check(manual=True)
+        return False
 
     def focus_default(self):
         self.piece_size_input.setFocus(Qt.FocusReason.OtherFocusReason)

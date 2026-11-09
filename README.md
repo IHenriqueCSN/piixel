@@ -1,6 +1,6 @@
 # Piixel · ferramentas do Piixelverso
 
-Piixel é um aplicativo desktop do Piixelverso, organizado em módulos. A tela inicial oferece o **Ateliê**, para criar pixel arts e contar as peças por cor, o **Piixelfone**, para conversar e compartilhar designs com criptografia de ponta a ponta, e **Configurações**, para definir o tamanho das peças nas imagens exportadas. A interface usa Python e Qt (PySide6), e os designs ficam em arquivos locais `.pii`.
+Piixel é um aplicativo desktop do Piixelverso, organizado em módulos. A tela inicial oferece o **Ateliê**, para criar pixel arts e contar as peças por cor, o **Piixelfone**, para conversar e compartilhar designs com criptografia de ponta a ponta, e **Configurações**, para definir o tamanho das peças e verificar atualizações. A interface usa Python e Qt (PySide6), e os designs ficam em arquivos locais `.pii`.
 
 Ao iniciar, uma pequena tela com o Pii mostra **Carregando…**, uma barra de atividade animada e **Desenvolvido por Piixelverso**. Ela abre antes de carregar o editor e fecha automaticamente assim que a janela principal aparece, sem uma espera mínima. A animação continua funcionando durante a inicialização.
 
@@ -187,6 +187,17 @@ Abra **Configurações** na tela inicial, por **Arquivo → Configurações** no
 
 A configuração permanece entre sessões e é usada nas próximas exportações de PNG. Ela fica nas preferências locais do usuário. Voltar ao Ateliê preserva o desenho, as cores, o histórico e o arquivo aberto.
 
+Na instalação do Windows, a mesma página mostra a versão atual e oferece
+**Verificar atualizações**. O Piixel também faz uma verificação discreta em segundo
+plano após abrir. Quando existe uma versão estável nova no GitHub Releases, o
+programa oferece **Baixar e instalar** ou **Mais tarde**. O instalador só é aceito
+quando seu SHA-256 corresponde ao arquivo publicado junto com a Release.
+
+Depois do download, o fechamento normal permite salvar qualquer design pendente.
+O instalador substitui a versão anterior e reabre o Piixel; preferências, cores,
+conversas e arquivos `.pii` permanecem nos mesmos locais. A versão 0.1.0 ainda não
+contém esse recurso e precisa receber a 0.2.0 manualmente uma vez.
+
 ## Cores recentes e atalhos
 
 No Ateliê, a seção **Recentes · teclas 1–9**, acima da paleta, reúne até nove cores selecionadas nesta sessão. Pressione **1** a **9** para ativar a amostra com esse número, ou clique nela. Os números ficam legíveis tanto em cores claras quanto escuras; a cor ativa tem uma borda de destaque.
@@ -284,7 +295,13 @@ O resultado fica em `dist/`. O build usa o modo `onedir`: distribua a pasta inte
 
 Para Windows 10/11 de 64 bits, o projeto também inclui um **instalador assistido** com atalho no menu Iniciar, opção de atalho na área de trabalho e desinstalação pelo Windows. Ele instala para o usuário atual, inclui Python e todas as dependências e preserva designs e dados pessoais ao desinstalar.
 
-O [workflow Instalador Windows](https://github.com/IHenriqueCSN/piixel/actions/workflows/windows-installer.yml) gera o `.exe` em um computador Windows do GitHub. Abra uma execução concluída com sucesso e baixe **Artifacts → Piixel-Windows-x64**; extraia o ZIP e execute o arquivo `Piixel-Setup-0.1.0-x64.exe`. O número acompanha a versão do projeto. Esse artifact contém o instalador compilado; o ZIP do código-fonte continua disponível separadamente.
+O [workflow Instalador Windows](https://github.com/IHenriqueCSN/piixel/actions/workflows/windows-installer.yml) gera o `.exe` em um computador Windows do GitHub. Abra uma execução concluída com sucesso e baixe **Artifacts → Piixel-Windows-x64**; o número do arquivo acompanha a versão do projeto.
+
+Para distribuir uma atualização pelo próprio aplicativo, crie uma GitHub Release
+estável com a tag da versão e anexe individualmente o instalador e o `.sha256`
+gerados. O artifact do Actions não é usado diretamente pelos usuários porque tem
+prazo de expiração. O procedimento e os nomes exigidos estão no
+[guia do instalador Windows](docs/instalador-windows.md).
 
 Para gerar o instalador localmente com Inno Setup 6, siga o [guia do instalador Windows](docs/instalador-windows.md). O workflow também verifica instalação, abertura de um design no aplicativo instalado e desinstalação sem remover os dados de teste. Assinatura digital e notarização não fazem parte desta geração.
 
@@ -309,7 +326,9 @@ Para gerar o instalador localmente com Inno Setup 6, siga o [guia do instalador 
 - `piixelverso/replace.py`: escolha e prévia da substituição de cor.
 - `piixelverso/png_export.py`: desenho e gravação atômica do PNG com medidas.
 - `piixelverso/export_dialog.py`: escolha da aparência e prévia da imagem exportada.
-- `piixelverso/settings.py`: módulo de configuração do tamanho das peças.
+- `piixelverso/settings.py`: módulo de configuração do tamanho das peças e acesso às atualizações.
+- `piixelverso/update.py`: descoberta de Releases e download verificado do instalador.
+- `piixelverso/update_ui.py`: verificação em segundo plano e fluxo visual da atualização.
 - `piixelverso/resize.py`: cálculo do redimensionamento, posicionamento e recorte de peças.
 - `piixelverso/resize_dialog.py`: escolha das dimensões e aviso de peças fora dos novos limites.
 - `piixelverso/shapes.py`: geometria das linhas, retângulos e elipses, independente da interface.

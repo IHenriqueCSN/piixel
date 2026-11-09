@@ -20,6 +20,7 @@ from .preferences import PreferencesError, PreferencesStore
 from .theme import APP_STYLE, apply_palette
 from .thumbnails import thumbnail_png
 from .ui.icons import icon
+from .update_ui import UpdateController
 
 STYLE = APP_STYLE
 
@@ -36,6 +37,8 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1120, 750)
         self.resize(1380, 900)
         self.preferences = preferences if preferences is not None else PreferencesStore()
+        self.updates = UpdateController(self)
+        self._update_close_approved = False
         self._refreshing_recent_files = False
         self._recent_error_reported = False
         self.current_module: str | None = None
@@ -71,6 +74,7 @@ class MainWindow(QMainWindow):
         self.show_home()
         if self.preferences.load_error:
             QTimer.singleShot(0, self._show_preferences_load_error)
+        QTimer.singleShot(2500, self.updates.check_automatically)
 
     def _get_module(self, module_id: str) -> ModulePage:
         if module_id not in self._definitions or module_id not in self._factories:
@@ -83,6 +87,7 @@ class MainWindow(QMainWindow):
             module.home_requested.connect(self.show_home)
             module.document_accessed.connect(self._record_recent_file)
             module.attach_navigation(self.home_action, self.settings_action)
+            module.attach_updater(self.updates)
             module.windowTitleChanged.connect(
                 lambda _title, key=module_id: self._sync_module_state(key)
             )
@@ -201,15 +206,28 @@ class MainWindow(QMainWindow):
         if self.preferences.load_error:
             QMessageBox.warning(self, "Preferências", self.preferences.load_error)
 
+    def confirm_close_for_update(self) -> bool:
+        """Ask about every open document before an updater starts waiting."""
+        for module in self.module_pages.values():
+            if not module.confirm_close():
+                return False
+        self._update_close_approved = True
+        return True
+
+    def cancel_update_close(self):
+        self._update_close_approved = False
+
     def closeEvent(self, event):
         self.loading.close()
         # A hidden page may still own an unsaved document.
-        for module in self.module_pages.values():
-            if not module.confirm_close():
-                event.ignore()
-                return
+        if not self._update_close_approved:
+            for module in self.module_pages.values():
+                if not module.confirm_close():
+                    event.ignore()
+                    return
         for module in self.module_pages.values():
             module.shutdown()
+        self.updates.shutdown()
         event.accept()
 
 

@@ -9,6 +9,9 @@ flowchart TD
     Registry --> Contract["module_api: ModulePage"]
     Contract --> Atelier["atelier: coordenação do editor"]
     Contract --> Settings["settings: configurações"]
+    Shell --> UpdateUI["update_ui: coordenação em segundo plano"]
+    UpdateUI --> Update["update: Releases e SHA-256"]
+    Update --> GitHub["GitHub Releases"]
     Contract --> Phone["piixelfone/page: interface e worker"]
     Phone --> PhoneService["piixelfone/service: casos de uso"]
     PhoneService --> PhoneStore["store / crypto: histórico e cofre cifrados"]
@@ -55,6 +58,7 @@ O contrato contém:
 - `set_active`, `prepare_navigation` e `focus_default` para ativação e navegação.
 - `home_state` para informar opcionalmente o nome e as alterações pendentes exibidos no início.
 - `attach_navigation` para receber as ações globais de início e configurações.
+- `attach_updater` para a página de Configurações receber o serviço da aplicação.
 - `confirm_close` para autorizar o fechamento, inclusive quando o módulo está oculto.
 - `shutdown` para encerrar o trabalho em segundo plano depois que todos os módulos aceitarem o fechamento.
 - `load_path` e o sinal `document_accessed` para módulos que abrem documentos.
@@ -80,6 +84,14 @@ O Piixelfone fica isolado em `piixelfone/`. `page.py` constrói a interface e en
 `supabase/piixelfone.sql` mantém tabelas em schema privado, com RLS e sem acesso direto por clientes. RPCs autorizam cada operação pelo JWT autenticado. O conteúdo cifrado permanece até o destinatário confirmar ou recusar; depois disso fica apenas o estado e o hash para preservar a idempotência. Números antigos ficam reservados permanentemente. O [guia de instalação](PIIXELFONE_SERVIDOR.md) descreve a implantação e as limitações criptográficas.
 
 `format.py` continua responsável pelo `.pii` versionado e pela gravação atômica. `preferences.py` continua guardando arquivos recentes, cores salvas e tamanho das peças. `png_export.py` continua renderizando e gravando o PNG com as mesmas medidas, cores e opções.
+
+`update.py` trata a versão, o manifesto de GitHub Releases, os limites de download e
+a validação SHA-256 sem depender do Qt. `update_ui.py` executa rede e disco fora da
+thread gráfica, apresenta o progresso e só entrega o instalador ao sistema depois
+que todos os módulos autorizam o fechamento. `startup.py` inicia um PowerShell do
+próprio Windows, que espera o processo principal liberar o `AppMutex`; o Inno Setup
+então substitui a aplicação e reabre o executável instalado. Esse fluxo fica
+desativado no código-fonte e fora do pacote Windows congelado.
 
 Esta reorganização não altera formatos, chaves das preferências, limites das pranchetas, mensagens, menus ou atalhos. Os testes anteriores permanecem nos mesmos arquivos; os novos testes verificam a sessão, as ações e o contrato dos módulos isoladamente.
 

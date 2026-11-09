@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import os
 from pathlib import Path
 import subprocess
@@ -13,6 +14,57 @@ from contextlib import contextmanager
 _SPLASH_ARGUMENT = "--piixel-startup-splash"
 _PAGE_LOADING_ARGUMENT = "--piixel-page-loading"
 _INSTALLER_MUTEX = "Piixel.Piixelverso.Desktop"
+
+
+def _powershell_literal(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def launch_update_after_exit(installer: str | Path) -> bool:
+    """Start an OS-owned helper which waits for this process before upgrading.
+
+    The helper must live outside the bundled application because Inno Setup
+    replaces the executable and its dependency directory during the upgrade.
+    """
+    if sys.platform != "win32" or not getattr(sys, "frozen", False):
+        return False
+    try:
+        path = Path(installer).resolve(strict=True)
+    except (OSError, RuntimeError):
+        return False
+    if not path.is_file() or not path.name.lower().endswith("-x64.exe"):
+        return False
+    restart = Path(sys.executable).resolve()
+    system_root = os.environ.get("SystemRoot", r"C:\Windows")
+    powershell = Path(system_root) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+    if not powershell.is_file():
+        return False
+    installer_value = _powershell_literal(str(path))
+    restart_value = _powershell_literal(str(restart))
+    script = (
+        f"$installer={installer_value};$restart={restart_value};"
+        f"Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue;"
+        "Start-Sleep -Milliseconds 250;"
+        "$result=Start-Process -FilePath $installer -ArgumentList "
+        "@('/SP-','/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/CLOSEAPPLICATIONS') "
+        "-Wait -PassThru;"
+        "if($result.ExitCode -eq 0){"
+        "Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue;"
+        "Start-Process -FilePath $restart}"
+    )
+    encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
+    try:
+        subprocess.Popen(
+            [str(powershell), "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
+             "-EncodedCommand", encoded],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            close_fds=True,
+            creationflags=(subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS |
+                           subprocess.CREATE_NEW_PROCESS_GROUP),
+        )
+    except OSError:
+        return False
+    return True
 
 
 @contextmanager

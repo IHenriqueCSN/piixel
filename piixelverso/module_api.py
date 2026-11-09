@@ -47,6 +47,9 @@ class ModulePage(QWidget):
         """Receive application-level navigation actions once, when instantiated."""
         self.home_button.setToolTip("Voltar à tela inicial (Alt+Home)")
 
+    def attach_updater(self, updater) -> None:
+        """Receive the optional application update service."""
+
     def load_path(self, path: str | Path) -> bool:
         """Return whether this module successfully opened a document."""
         return False

@@ -38,7 +38,7 @@ O script primeiro empacota o aplicativo e depois compila o instalador. O resulta
 fica em:
 
 ```text
-dist\installer\Piixel-Setup-0.1.0-x64.exe
+dist\installer\Piixel-Setup-0.2.0-x64.exe
 ```
 
 O número vem de `version` em `pyproject.toml`. O compilador do Inno Setup é
@@ -61,11 +61,41 @@ Mesmo com `-SkipBuild`, Python é usado para ler a versão do projeto. Um pacote
 gerado no Linux ou macOS não pode ser convertido em um executável Windows por
 esse comando; a geração precisa ocorrer em Windows ou pelo workflow.
 
+## Publicar uma atualização
+
+O atualizador usa **GitHub Releases**. O artifact do Actions serve para obter os
+arquivos compilados, mas não é consultado pelo aplicativo porque expira e pode
+exigir uma conta do GitHub.
+
+1. Altere a versão em `pyproject.toml` e `piixelverso/__init__.py`, mantendo os
+   dois valores iguais e no formato `1.2.3`.
+2. Gere o instalador pelo workflow ou pelo script local. O resultado inclui o
+   `.exe` e o arquivo `.exe.sha256`.
+3. No GitHub, crie uma Release estável com a tag `v1.2.3`, apontando para o commit
+   dessa versão. Não marque a Release como *pre-release*.
+4. Anexe os dois arquivos individualmente, com os nomes exatos
+   `Piixel-Setup-1.2.3-x64.exe` e `Piixel-Setup-1.2.3-x64.exe.sha256`.
+
+O programa compara versões numericamente, exige que a tag, os nomes dos arquivos
+e a versão do instalador coincidam e valida o SHA-256 antes de executar qualquer
+arquivo. Uma Release incompleta ou um checksum diferente é recusado.
+
+A versão 0.2.0 inaugura o atualizador. Quem tiver a versão 0.1.0 precisa instalar
+a 0.2.0 manualmente uma única vez; as versões posteriores já poderão ser obtidas
+pelo próprio Piixel.
+
 ## Atualização e dados do usuário
 
-Feche o Piixel antes de instalar uma atualização. O instalador verifica se ele
-está aberto; o fechamento normal do aplicativo continua permitindo salvar designs
-que tenham alterações. A instalação não força o encerramento nem reinicia o Windows automaticamente.
+Na versão instalada para Windows, o Piixel procura uma Release nova em segundo
+plano depois da abertura. A verificação também pode ser iniciada em
+**Configurações → Verificar atualizações**. O código-fonte executado diretamente
+e os pacotes de Linux e macOS não ativam esse fluxo do instalador Windows.
+
+Ao escolher **Baixar e instalar**, o download mostra o progresso e pode ser
+cancelado. O Piixel só começa a atualização depois de conferir o checksum e de
+permitir que cada módulo confirme ou salve alterações pendentes. Um processo do
+Windows espera o programa encerrar, executa o Inno Setup silenciosamente e reabre
+o Piixel atualizado. A instalação não reinicia o Windows.
 
 Atualizações usam a mesma identificação do aplicativo e a mesma pasta de
 instalação. A pasta `_internal`, que contém as dependências distribuídas, é
@@ -86,7 +116,9 @@ instalador não contém chaves administrativas nem altera o projeto Supabase.
 - `scripts/build.py` gera a pasta distribuível, o ícone e os metadados de versão.
 - `scripts/build_windows_installer.ps1` valida o pacote e chama `ISCC.exe`.
 - `installer/windows/piixel.iss` define a instalação, atalhos e desinstalação.
-- `.github/workflows/windows-installer.yml` gera o pacote em Windows e publica o artifact.
+- `piixelverso/update.py` consulta Releases e baixa o instalador com limite de tamanho e SHA-256.
+- `piixelverso/update_ui.py` executa a verificação fora da interface e coordena a confirmação.
+- `.github/workflows/windows-installer.yml` gera o pacote em Windows e publica o artifact usado para montar uma Release.
 
 O `AppId` do arquivo `.iss` deve permanecer igual entre versões, para que a
 atualização reconheça a instalação anterior. O `AppMutex` também deve acompanhar
