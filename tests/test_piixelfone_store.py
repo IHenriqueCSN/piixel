@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 import os
 from pathlib import Path
 import sqlite3
@@ -115,12 +116,12 @@ class PiixelfoneStoreTests(unittest.TestCase):
     def test_ciphertext_corruption_and_index_tampering_are_detected(self):
         record = self.message()
         self.store.put_message(record)
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             original = connection.execute("SELECT sealed FROM messages WHERE id = ?", (record["id"],)).fetchone()[0]
             connection.execute("UPDATE messages SET sealed = ? WHERE id = ?", ("AAAA", record["id"]))
         with self.assertRaises(StoreError):
             self.store.message(record["id"])
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             connection.execute("UPDATE messages SET sealed = ?, peer_id = ? WHERE id = ?", (original, "another-peer", record["id"]))
         with self.assertRaises(StoreError):
             self.store.all_messages()
@@ -130,7 +131,7 @@ class PiixelfoneStoreTests(unittest.TestCase):
         two = self.contact(user_id=str(uuid.uuid4()), number="123456")
         self.store.put_contact(one)
         self.store.put_contact(two)
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             sealed = connection.execute("SELECT sealed FROM contacts WHERE user_id = ?", (two["user_id"],)).fetchone()[0]
             connection.execute("UPDATE contacts SET sealed = ? WHERE user_id = ?", (sealed, one["user_id"]))
         with self.assertRaises(StoreError):

@@ -31,7 +31,7 @@ class WindowsAssetsTests(unittest.TestCase):
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
-        self.root = Path(self.directory.name) / "Piixel com espaços"
+        self.root = Path(self.directory.name).resolve() / "Piixel com espaços"
         self.root.mkdir()
         self.metadata("2.3.4")
         target = self.root / "piixelverso" / "assets" / "brand"
