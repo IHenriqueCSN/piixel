@@ -7,18 +7,18 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QFont, QKeySequence
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStackedWidget, QWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStackedWidget
 
-from .atelier import AtelierModule, icon
 from .brand import app_icon, ensure_fonts
 from .home import HomePage
 from .modules import MODULES
+from .module_api import ModulePage
 from .format import DesignFormatError, load_design
 from .model import PixelDesign
 from .preferences import PreferencesError, PreferencesStore
-from .settings import SettingsModule
 from .theme import APP_STYLE, apply_palette
 from .thumbnails import thumbnail_png
+from .ui.icons import icon
 
 STYLE = APP_STYLE
 
@@ -38,10 +38,10 @@ class MainWindow(QMainWindow):
         self._refreshing_recent_files = False
         self._recent_error_reported = False
         self.current_module: str | None = None
-        self.module_pages: dict[str, QWidget] = {}
+        self.module_pages: dict[str, ModulePage] = {}
         self._opened_modules: set[str] = set()
         self._definitions = {module.id: module for module in MODULES}
-        self._factories = {"atelier": AtelierModule, "settings": SettingsModule}
+        self._factories = {module.id: module.factory for module in MODULES if module.factory is not None}
 
         self.pages = QStackedWidget()
         self.pages.setObjectName("applicationPages")
@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
         if self.preferences.load_error:
             QTimer.singleShot(0, self._show_preferences_load_error)
 
-    def _get_module(self, module_id: str) -> QWidget:
+    def _get_module(self, module_id: str) -> ModulePage:
         if module_id not in self._definitions or module_id not in self._factories:
             raise ValueError(f"Módulo desconhecido: {module_id}")
         if module_id not in self.module_pages:
@@ -79,30 +79,24 @@ class MainWindow(QMainWindow):
             self.pages.addWidget(module)
             self.module_pages[module_id] = module
             module.home_requested.connect(self.show_home)
-            if isinstance(module, AtelierModule):
-                module.document_accessed.connect(self._record_recent_file)
-                file_menu = module.command_bar.menus["file"]
-                file_menu.addSeparator()
-                file_menu.addAction(self.home_action)
-                file_menu.addAction(self.settings_action)
+            module.document_accessed.connect(self._record_recent_file)
+            module.attach_navigation(self.home_action, self.settings_action)
             module.windowTitleChanged.connect(
                 lambda _title, key=module_id: self._sync_module_state(key)
             )
-            module.home_button.setToolTip("Voltar à tela inicial (Alt+Home)")
         return self.module_pages[module_id]
 
     def _sync_module_state(self, module_id: str):
         if module_id not in self._opened_modules:
             return
         module = self.module_pages[module_id]
-        if isinstance(module, AtelierModule):
-            self.home_page.set_module_state(
-                module_id, module.design.name, not module.history.isClean()
-            )
+        state = module.home_state()
+        if state is not None:
+            self.home_page.set_module_state(module_id, state.title, state.dirty)
         if self.current_module == module_id:
             self.setWindowTitle(module.windowTitle())
 
-    def open_module(self, module_id: str) -> QWidget:
+    def open_module(self, module_id: str) -> ModulePage:
         module = self._get_module(module_id)
         if self.current_module and self.current_module != module_id:
             previous = self.module_pages[self.current_module]
@@ -120,11 +114,7 @@ class MainWindow(QMainWindow):
 
     def _focus_module_if_current(self, module_id: str):
         if self.current_module == module_id:
-            module = self.module_pages[module_id]
-            if isinstance(module, AtelierModule):
-                module.canvas.setFocus()
-            else:
-                module.focus_default()
+            self.module_pages[module_id].focus_default()
 
     def show_home(self):
         if self.current_module:
@@ -194,11 +184,11 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Preferências", self.preferences.load_error)
 
     def closeEvent(self, event):
-        # An editor may be hidden on the home screen and still contain a design.
-        atelier = self.module_pages.get("atelier")
-        if atelier is not None and not atelier.confirm_discard():
-            event.ignore()
-            return
+        # A hidden page may still own an unsaved document.
+        for module in self.module_pages.values():
+            if not module.confirm_close():
+                event.ignore()
+                return
         event.accept()
 
 

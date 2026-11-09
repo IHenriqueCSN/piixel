@@ -1,13 +1,14 @@
 """Application preferences, independent of the Ateliê document."""
 from __future__ import annotations
 
-from PySide6.QtCore import QLocale, Qt, Signal
+from PySide6.QtCore import QLocale, Qt
 from PySide6.QtWidgets import (
     QDoubleSpinBox, QFormLayout, QFrame, QHBoxLayout, QLabel,
     QMessageBox, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
 )
 
 from .brand import svg_pixmap
+from .module_api import ModulePage
 from .preferences import (
     MAX_PIECE_SIZE_MM, MIN_PIECE_SIZE_MM, PreferencesStore,
 )
@@ -26,9 +27,7 @@ QDoubleSpinBox {{ border: 1px solid {BORDER}; border-radius: 6px; padding: 8px; 
 """
 
 
-class SettingsModule(QWidget):
-    home_requested = Signal()
-
+class SettingsModule(ModulePage):
     def __init__(self, parent=None, preferences: PreferencesStore | None = None):
         super().__init__(parent)
         self.preferences = preferences if preferences is not None else PreferencesStore()

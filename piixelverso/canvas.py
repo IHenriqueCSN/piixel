@@ -51,6 +51,16 @@ class PixelCanvas(QWidget):
                           self.design.height * self.cell_size + 2 * self.MARGIN)
         self.update()
 
+    @property
+    def has_pending_changes(self) -> bool:
+        """Whether an in-progress freehand stroke has changed document pixels."""
+        return bool(self._before)
+
+    @property
+    def is_erasing(self) -> bool:
+        """Describe the current stroke without exposing its private gesture state."""
+        return self._erase
+
     def set_design(self, design: PixelDesign):
         self.finish_stroke()
         self.design = design

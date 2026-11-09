@@ -250,7 +250,10 @@ Esta etapa gera o aplicativo para distribuição local. Assinatura digital, nota
 - `piixelverso/splash.py`: tela de carregamento com animação independente da inicialização do editor.
 - `piixelverso/modules.py`: cadastro dos módulos disponíveis: Ateliê e Configurações.
 - `piixelverso/home.py`: tela inicial.
-- `piixelverso/atelier.py`: módulo Ateliê, com desenho, histórico, contagem e salvamento.
+- `piixelverso/atelier.py`: coordenação dos fluxos do Ateliê.
+- `piixelverso/editor/`: sessão do documento, histórico, ações, paleta e construção da interface do editor.
+- `piixelverso/ui/`: ícones e pequenos componentes visuais compartilhados.
+- `piixelverso/module_api.py`: contrato comum de navegação, estado e fechamento dos módulos.
 - `piixelverso/preferences.py`: preferências locais, arquivos recentes e cores salvas por escolha do usuário.
 - `piixelverso/recents.py`: lista com miniaturas, nomes e caminhos dos arquivos recentes.
 - `piixelverso/colors.py`: diálogo de cores personalizadas e opção de persistência.
@@ -265,5 +268,8 @@ Esta etapa gera o aplicativo para distribuição local. Assinatura digital, nota
 - `tests/`: verificações do editor e do formato.
 - `run_piixelverso.py`: entrada usada no empacotamento.
 - `scripts/build.py`: geração do aplicativo pelo PyInstaller.
+- `scripts/capture_behavior.py`: captura e comparação de telas, arquivos e atalhos antes/depois de uma alteração.
 - `requirements.txt`: dependências para executar o editor.
 - `requirements-dev.txt`: dependências para empacotar.
+
+A separação de responsabilidades e o fluxo entre esses componentes estão documentados em [docs/arquitetura.md](docs/arquitetura.md).
