@@ -54,6 +54,15 @@ def icon(kind: str, color=INK) -> QIcon:
     if kind == "pencil":
         p.drawPolygon([QPoint(x, y) for x, y in [(5, 19), (7, 13), (16, 4), (20, 8), (11, 17)]])
         p.drawLine(14, 6, 18, 10)
+    elif kind == "line":
+        p.drawLine(5, 19, 19, 5)
+        p.drawRect(3, 17, 4, 4); p.drawRect(17, 3, 4, 4)
+    elif kind == "rectangle":
+        p.drawRect(4, 6, 16, 12)
+    elif kind == "ellipse":
+        p.drawEllipse(4, 5, 16, 14)
+    elif kind == "shape_fill":
+        p.fillRect(5, 6, 14, 12, QColor(color))
     elif kind == "eraser":
         p.drawLine(5, 16, 14, 5); p.drawLine(14, 5, 20, 10)
         p.drawLine(20, 10, 12, 20); p.drawLine(12, 20, 8, 20); p.drawLine(8, 20, 5, 16)
@@ -478,6 +487,10 @@ class AtelierModule(QWidget):
             ("bucket", "Balde de tinta", "bucket", lambda: self.select_tool("bucket"), "G"),
             ("eraser", "Borracha", "eraser", lambda: self.select_tool("eraser"), "E"),
             ("picker", "Conta-gotas", "picker", lambda: self.select_tool("picker"), "I"),
+            ("line", "Linha reta", "line", lambda: self.select_tool("line"), "L"),
+            ("rectangle", "Retângulo", "rectangle", lambda: self.select_tool("rectangle"), "R"),
+            ("ellipse", "Elipse", "ellipse", lambda: self.select_tool("ellipse"), "O"),
+            ("shape_fill", "Preencher formas", "shape_fill", None, None),
             ("replace_color", "Substituir cor…", "replace_color", self.show_replace_color_dialog, "Ctrl+H"),
             ("custom_color", "Cor personalizada", "palette", self.custom_color, None),
             ("fit", "Ajustar à janela", "fit", self.fit_canvas, None),
@@ -500,8 +513,13 @@ class AtelierModule(QWidget):
             action.setShortcuts(list(unique.values()))
             hints = " / ".join(s.toString(QKeySequence.SequenceFormat.NativeText) for s in unique.values())
             action.setToolTip(f"{text} ({hints})" if hints else text)
-            action.triggered.connect(lambda _checked=False, handler=callback: handler())
-            if key in ("pencil", "bucket", "eraser", "picker"):
+            if key == "shape_fill":
+                action.setCheckable(True)
+                action.toggled.connect(self.set_shape_fill)
+                action.setEnabled(False)
+            else:
+                action.triggered.connect(lambda _checked=False, handler=callback: handler())
+            if key in ("pencil", "bucket", "eraser", "picker", "line", "rectangle", "ellipse"):
                 action.setCheckable(True)
                 self.tool_action_group.addAction(action)
             self.command_actions[key] = action
@@ -517,6 +535,17 @@ class AtelierModule(QWidget):
         self.canvas.finish_stroke()
         self.canvas.tool = tool
         self.command_actions[tool].setChecked(True)
+        self._sync_shape_actions()
+
+    def set_shape_fill(self, filled: bool):
+        self.canvas.finish_stroke()
+        self.canvas.shape_filled = bool(filled)
+        self.command_actions["shape_fill"].setChecked(self.canvas.shape_filled)
+
+    def _sync_shape_actions(self):
+        self.command_actions["shape_fill"].setEnabled(
+            self._active and self.canvas.tool in ("rectangle", "ellipse")
+        )
 
     def select_color(self, color):
         self.canvas.color = color.upper()
@@ -681,14 +710,15 @@ class AtelierModule(QWidget):
         self._update_title()
 
     def _commit_stroke(self, before, after):
+        shapes = {"line": "Desenhar linha reta", "rectangle": "Desenhar retângulo", "ellipse": "Desenhar elipse"}
         text = "Apagar pixels" if self.canvas._erase else (
-            "Preencher área" if self.canvas.tool == "bucket" else "Pintar pixels")
+            shapes.get(self.canvas.tool, "Preencher área" if self.canvas.tool == "bucket" else "Pintar pixels"))
         self.history.push(PixelCommand(self, before, after, text))
 
     def prepare_navigation(self):
         """Commit the current gesture and name before leaving this module."""
-        self.canvas.finish_stroke()
         self.rename_design()
+        self.canvas.finish_stroke()
 
     def set_active(self, active: bool):
         """Keep editor commands scoped to the visible module."""
@@ -701,6 +731,7 @@ class AtelierModule(QWidget):
         self.command_actions["undo"].setEnabled(self._active and self.history.canUndo())
         self.command_actions["redo"].setEnabled(self._active and self.history.canRedo())
         self.command_actions["replace_color"].setEnabled(self._active and self.design.filled_count > 0)
+        self._sync_shape_actions()
         self._update_title()
 
     def undo(self):
@@ -751,8 +782,8 @@ class AtelierModule(QWidget):
             self.name_edit.setText(name)
 
     def confirm_discard(self):
-        self.canvas.finish_stroke()
         self.rename_design()
+        self.canvas.finish_stroke()
         if self.history.isClean():
             return True
         dialog = QMessageBox(self.window())
@@ -844,13 +875,13 @@ class AtelierModule(QWidget):
         return True
 
     def save(self):
-        self.canvas.finish_stroke()
         self.rename_design()
+        self.canvas.finish_stroke()
         return self._save_path(self.file_path) if self.file_path else self.save_as()
 
     def save_as(self):
-        self.canvas.finish_stroke()
         self.rename_design()
+        self.canvas.finish_stroke()
         name = self.file_path.name if self.file_path else "meu-design.pii"
         path, _ = QFileDialog.getSaveFileName(self.window(), "Salvar design", str(self.file_path or name), "Design Piixelverso (*.pii)")
         if not path:

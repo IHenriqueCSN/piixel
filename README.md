@@ -23,6 +23,7 @@ Se o arquivo tiver sido movido ou apagado, a miniatura e o caminho anteriores pe
 - Grade de 1 a 128 quadradinhos em cada dimensão.
 - Redimensionamento da prancheta entre 10 e 128 células por eixo, preservando as peças e o histórico.
 - Lápis, balde de tinta, borracha e conta-gotas para capturar cores já usadas.
+- Linha reta, retângulo e elipse, com prévia, cancelamento e preenchimento opcional das formas.
 - Substituição de uma cor em todo o desenho, com prévia da quantidade de peças afetadas.
 - Paleta inicial e cores personalizadas da sessão, com opção de salvar cores nomeadas para próximas sessões.
 - Contagem por cor e total de peças; espaços vazios não entram na contagem.
@@ -109,6 +110,18 @@ Em **Exibir → Peças**, alterne entre **Quadradinhos** e **Rosquinhas (hama be
 
 Clique no nome para renomear o design. A lista de cores à direita também permite selecionar uma cor já usada. Abra `examples/cogumelo-do-bosque.pii` para experimentar o editor com um desenho pronto.
 
+## Desenhar formas geométricas
+
+Escolha **Editar → Formas → Linha reta**, **Retângulo** ou **Elipse**. As mesmas ferramentas estão na seta do botão de formas da barra compacta; a parte principal do botão volta à última forma utilizada.
+
+Selecione uma cor, clique no ponto inicial e arraste até a extremidade desejada. A prévia acompanha o mouse sem alterar o desenho ou a contagem. **Solte o mouse para confirmar** ou pressione **Esc** durante o arraste para cancelar. Cada forma confirmada corresponde a uma única ação de **Desfazer**.
+
+![Linha, retângulos e elipses no Ateliê](docs/previa-formas.png)
+
+Retângulos e elipses começam com apenas o contorno. Marque **Preencher** na barra, ou **Editar → Formas → Preencher formas**, para usar a cor ativa também no interior. A opção fica disponível ao selecionar retângulo ou elipse. Para desenhar quadrados ou círculos, use a mesma quantidade de células na largura e na altura.
+
+Os atalhos são **L** para linha, **R** para retângulo e **O** para elipse. As formas funcionam em quadradinhos e rosquinhas e respeitam os limites da prancheta. O botão direito continua apagando livremente. Ao trocar de ferramenta, salvar ou voltar ao início durante um arraste, a forma atual é concluída.
+
 ## Redimensionar a prancheta
 
 No Ateliê, use **Editar → Redimensionar prancheta…** ou **Ctrl+Alt+C**. Defina a largura e a altura de forma independente, de **10 a 128 células** por dimensão. Por exemplo, é possível usar uma prancheta de **64 × 32**, **10 × 10** ou **128 × 128**.
@@ -158,7 +171,7 @@ A lista de recentes, as cores que você escolheu guardar e o tamanho configurado
 A barra compacta no topo reúne menus tradicionais e ícones das ferramentas mais usadas. Os menus abrem somente quando acionados, deixando mais espaço para a prancheta:
 
 - **Arquivo**: novo design, abrir, salvar, salvar como, exportar PNG, tela inicial e Configurações.
-- **Editar**: desfazer/refazer, redimensionar prancheta, lápis, balde de tinta, borracha, conta-gotas, substituir cor e cor personalizada.
+- **Editar**: desfazer/refazer, redimensionar prancheta, lápis, balde de tinta, borracha, conta-gotas, formas geométricas, substituir cor e cor personalizada.
 - **Exibir**: formato das peças, grade, zoom e ajustar à janela.
 
 Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto você desenha, sem precisar abrir os menus. No Windows e Linux:
@@ -178,6 +191,10 @@ Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto 
 | Balde de tinta | G |
 | Borracha | E |
 | Conta-gotas | I |
+| Linha reta | L |
+| Retângulo | R |
+| Elipse | O |
+| Cancelar a prévia de uma forma | Esc |
 | Substituir cor em todo o desenho | Ctrl+H |
 | Menu Arquivo | Alt+A |
 | Menu Editar | Alt+E |
@@ -244,6 +261,7 @@ Esta etapa gera o aplicativo para distribuição local. Assinatura digital, nota
 - `piixelverso/settings.py`: módulo de configuração do tamanho das peças.
 - `piixelverso/resize.py`: cálculo do redimensionamento, posicionamento e recorte de peças.
 - `piixelverso/resize_dialog.py`: escolha das dimensões e aviso de peças fora dos novos limites.
+- `piixelverso/shapes.py`: geometria das linhas, retângulos e elipses, independente da interface.
 - `tests/`: verificações do editor e do formato.
 - `run_piixelverso.py`: entrada usada no empacotamento.
 - `scripts/build.py`: geração do aplicativo pelo PyInstaller.

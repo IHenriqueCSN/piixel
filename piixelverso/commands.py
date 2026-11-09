@@ -4,7 +4,7 @@ from __future__ import annotations
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QHBoxLayout, QLabel, QMenuBar,
+    QCheckBox, QComboBox, QHBoxLayout, QLabel, QMenu, QMenuBar,
     QSizePolicy, QSlider, QToolBar, QToolButton, QWidget,
 )
 
@@ -71,6 +71,11 @@ class EditorCommandBar(QWidget):
         self.menus["edit"].addSeparator()
         for name in ("pencil", "bucket", "eraser", "picker"):
             self.menus["edit"].addAction(commands[name])
+        self.shape_menu = self.menus["edit"].addMenu("Formas")
+        for name in ("line", "rectangle", "ellipse"):
+            self.shape_menu.addAction(commands[name])
+        self.shape_menu.addSeparator()
+        self.shape_menu.addAction(commands["shape_fill"])
         self.menus["edit"].addSeparator()
         self.menus["edit"].addAction(commands["replace_color"])
         self.menus["edit"].addAction(commands["custom_color"])
@@ -90,7 +95,10 @@ class EditorCommandBar(QWidget):
         for name in ("undo", "redo"):
             self._add_command(name)
         self.toolbar.addSeparator()
-        for name in ("pencil", "bucket", "eraser", "picker", "replace_color", "custom_color"):
+        for name in ("pencil", "bucket", "eraser", "picker"):
+            self._add_command(name)
+        self._build_shape_tools()
+        for name in ("replace_color", "custom_color"):
             self._add_command(name)
         self.toolbar.addSeparator()
 
@@ -138,6 +146,47 @@ class EditorCommandBar(QWidget):
         command.setAutoRaise(True)
         command.setFixedSize(29, 29)
         self.buttons[name] = command
+
+    def _build_shape_tools(self):
+        """Keep three drawing tools in one compact button using shared actions."""
+        self.shape_button = QToolButton()
+        self.shape_button.setObjectName("compactCommand")
+        self.shape_button.setAccessibleName("Formas geométricas")
+        self.shape_button.setAutoRaise(True)
+        self.shape_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.shape_button.setIconSize(QSize(18, 18))
+        self.shape_button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        self.shape_button.setFixedSize(38, 29)
+        self.shape_popup = QMenu(self.shape_button)
+        for name in ("line", "rectangle", "ellipse"):
+            action = self.commands[name]
+            self.shape_popup.addAction(action)
+            action.toggled.connect(
+                lambda checked, command=action: self._select_shape_action(command, checked)
+            )
+        self.shape_button.setMenu(self.shape_popup)
+        self.shape_button.setDefaultAction(self.commands["line"])
+        self.toolbar.addWidget(self.shape_button)
+        self.buttons["shapes"] = self.shape_button
+
+        self.fill_checkbox = QCheckBox("Preencher")
+        self.fill_checkbox.setObjectName("compactShapeFill")
+        self.fill_checkbox.setAccessibleName("Preencher formas geométricas")
+        self.fill_checkbox.setToolTip("Preencher retângulos e elipses com a cor ativa")
+        fill_action = self.commands["shape_fill"]
+        self.fill_checkbox.toggled.connect(fill_action.setChecked)
+        fill_action.changed.connect(self._sync_shape_fill)
+        self.toolbar.addWidget(self.fill_checkbox)
+        self._sync_shape_fill()
+
+    def _select_shape_action(self, action: QAction, checked: bool):
+        if checked:
+            self.shape_button.setDefaultAction(action)
+
+    def _sync_shape_fill(self):
+        action = self.commands["shape_fill"]
+        self.fill_checkbox.setChecked(action.isChecked())
+        self.fill_checkbox.setEnabled(action.isEnabled())
 
     def _build_view_menu(self):
         pieces = self.menus["view"].addMenu("Peças")

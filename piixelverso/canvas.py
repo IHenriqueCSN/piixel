@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QWidget
 
 from .model import PixelDesign
 from .operations import flood_fill_changes
+from .shapes import SHAPE_TOOLS, shape_cells
 from .theme import BORDER, EMPTY_ALT, GRID, MUTED, PINK, WHITE
 
 
@@ -23,6 +24,7 @@ class PixelCanvas(QWidget):
         self.cell_size = 16
         self.color = "#E7794B"
         self.tool = "pencil"
+        self.shape_filled = False
         self.show_grid = True
         self.display_mode = "squares"
         self._before: dict[int, str | None] = {}
@@ -30,7 +32,15 @@ class PixelCanvas(QWidget):
         self._erase = False
         self._last: tuple[int, int] | None = None
         self._hover: tuple[int, int] | None = None
+        self._stroke_button = None
+        self._shape_preview: dict[int, str] = {}
+        self._shape_start: tuple[int, int] | None = None
+        self._shape_end: tuple[int, int] | None = None
+        self._shape_tool: str | None = None
+        self._shape_color = self.color
+        self._shape_fill = False
         self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.setObjectName("pixelCanvas")
         self.setAccessibleName("Grade de pixel art")
@@ -92,6 +102,27 @@ class PixelCanvas(QWidget):
         return QPoint(self.MARGIN + x * self.cell_size + self.cell_size // 2,
                       self.MARGIN + y * self.cell_size + self.cell_size // 2)
 
+    def _clamped_cell(self, point: QPoint) -> tuple[int, int]:
+        """Keep a dragged shape's endpoint on the nearest canvas cell."""
+        x = (point.x() - self.MARGIN) // self.cell_size
+        y = (point.y() - self.MARGIN) // self.cell_size
+        return (max(0, min(self.design.width - 1, x)),
+                max(0, min(self.design.height - 1, y)))
+
+    def _update_shape_preview(self, end: tuple[int, int]):
+        self._shape_end = end
+        cells = shape_cells(self._shape_tool, self._shape_start, end, self._shape_fill)
+        self._shape_preview = {
+            y * self.design.width + x: self._shape_color for x, y in cells
+        }
+        self.update()
+
+    def _clear_shape_preview(self):
+        self._shape_preview = {}
+        self._shape_start = None
+        self._shape_end = None
+        self._shape_tool = None
+
     def paintEvent(self, event):
         painter = QPainter(self)
         m, size = self.MARGIN, self.cell_size
@@ -101,7 +132,8 @@ class PixelCanvas(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, beads)
         for y in range(height):
             for x in range(width):
-                color = self.design.pixels[y * width + x]
+                index = y * width + x
+                color = self._shape_preview.get(index, self.design.pixels[index])
                 background = WHITE if (x + y) % 2 == 0 else EMPTY_ALT
                 painter.fillRect(m + x * size, m + y * size, size, size,
                                  QColor(background if beads else color or background))
@@ -138,8 +170,21 @@ class PixelCanvas(QWidget):
         cell = self.cell_at(event.position().toPoint())
         if cell is None:
             return
+        self.finish_stroke()
+        if self.tool in SHAPE_TOOLS and event.button() == Qt.MouseButton.LeftButton:
+            self.setFocus(Qt.FocusReason.MouseFocusReason)
+            self._drawing = True
+            self._erase = False
+            self._before = {}
+            self._last = None
+            self._stroke_button = event.button()
+            self._shape_start = cell
+            self._shape_tool = self.tool
+            self._shape_color = self.color
+            self._shape_fill = self.shape_filled
+            self._update_shape_preview(cell)
+            return
         if self.tool == "bucket" and event.button() == Qt.MouseButton.LeftButton:
-            self.finish_stroke()
             self._erase = False
             changes = flood_fill_changes(self.design, *cell, self.color)
             if changes:
@@ -159,6 +204,7 @@ class PixelCanvas(QWidget):
         self._erase = self.tool == "eraser" or event.button() == Qt.MouseButton.RightButton
         self._before = {}
         self._last = cell
+        self._stroke_button = event.button()
         self._paint_cell(*cell)
 
     def _paint_cell(self, x, y):
@@ -194,18 +240,40 @@ class PixelCanvas(QWidget):
         if cell:
             self.hovered.emit(*cell)
         if self._drawing:
-            if cell:
-                self._paint_line(self._last or cell, cell)
-            self._last = cell
+            if self._shape_tool is not None:
+                self._update_shape_preview(self._clamped_cell(event.position().toPoint()))
+            else:
+                if cell:
+                    self._paint_line(self._last or cell, cell)
+                self._last = cell
         self.update()
 
     def mouseReleaseEvent(self, event):
+        if not self._drawing or event.button() != self._stroke_button:
+            return
+        if self._shape_tool is not None:
+            self._update_shape_preview(self._clamped_cell(event.position().toPoint()))
         self.finish_stroke()
 
     def finish_stroke(self):
         if not self._drawing:
             return
         self._drawing = False
+        self._stroke_button = None
+        if self._shape_tool is not None:
+            after = {index: color for index, color in self._shape_preview.items()
+                     if self.design.pixels[index] != color}
+            before = {index: self.design.pixels[index] for index in after}
+            self._before = {}
+            self._last = None
+            self._clear_shape_preview()
+            for index, color in after.items():
+                self.design.pixels[index] = color
+            if after:
+                self.changed.emit()
+                self.stroke_finished.emit(before, after)
+            self.update()
+            return
         after = {i: self.design.pixels[i] for i in self._before
                  if self.design.pixels[i] != self._before[i]}
         before = {i: self._before[i] for i in after}
@@ -213,6 +281,24 @@ class PixelCanvas(QWidget):
         self._last = None
         if before:
             self.stroke_finished.emit(before, after)
+
+    def cancel_stroke(self) -> bool:
+        """Discard an uncommitted geometric preview without changing the design."""
+        if self._shape_tool is None:
+            return False
+        self._drawing = False
+        self._stroke_button = None
+        self._before = {}
+        self._last = None
+        self._clear_shape_preview()
+        self.update()
+        return True
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape and self.cancel_stroke():
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def leaveEvent(self, event):
         self._hover = None
