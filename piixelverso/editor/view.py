@@ -11,6 +11,7 @@ from ..brand import svg_pixmap
 from ..canvas import PixelCanvas
 from ..commands import EditorCommandBar
 from ..counts import ColorCountsView
+from ..materials import material_reference
 from ..ui.widgets import label
 from .palette import PALETTE
 from .recent_colors import RecentColorsWidget
@@ -113,7 +114,8 @@ class AtelierView(QWidget):
         self.status_text = label("Tudo pronto para criar.", "status")
         bottom.addWidget(self.status_text)
         bottom.addStretch()
-        bottom.addWidget(label("PIIXEL / ATELIÊ · VERSÃO 0.1", "status"))
+        from .. import __version__
+        bottom.addWidget(label(f"PIIXEL / ATELIÊ · VERSÃO {__version__}", "status"))
         layout.addLayout(bottom)
 
     def _left_panel(self):
@@ -179,8 +181,9 @@ class AtelierView(QWidget):
         swatch = QPushButton()
         swatch.setObjectName("swatch")
         swatch.setFixedSize(36, 29)
-        swatch.setToolTip(f"{name} · {color}")
-        swatch.setAccessibleName(f"Selecionar cor {color}")
+        reference = material_reference(color)
+        swatch.setToolTip(f"{name} · {reference}")
+        swatch.setAccessibleName(f"Selecionar {name}, {reference}")
         swatch.clicked.connect(lambda checked=False, value=color: self.color_selected.emit(value))
         swatch.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         swatch.customContextMenuRequested.connect(

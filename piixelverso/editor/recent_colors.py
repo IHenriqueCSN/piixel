@@ -8,6 +8,8 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from ..materials import TRANSPARENT_OUTLINE, display_color, material_reference
+from ..model import is_transparent, normalize_color
 from ..theme import BORDER, CREAM, INK, MUTED, PINK
 
 
@@ -60,10 +62,11 @@ class RecentColorsWidget(QWidget):
         self.set_colors((), "")
 
     def set_colors(self, colors: Sequence[str], active_color: str) -> None:
-        parsed = [QColor(value) for value in colors[:9]]
-        if any(not color.isValid() for color in parsed):
+        values = [normalize_color(value) for value in colors[:9]]
+        if any(value is None for value in values):
             raise ValueError("Cor recente inválida.")
-        active = active_color.upper()
+        parsed = [QColor(display_color(value)) for value in values]
+        active = normalize_color(active_color) if active_color else None
         for index, button in enumerate(self.buttons):
             number = index + 1
             if index >= len(parsed):
@@ -78,18 +81,20 @@ class RecentColorsWidget(QWidget):
                 )
                 continue
             color = parsed[index]
-            value = color.name(QColor.NameFormat.HexRgb).upper()
+            value = values[index]
             name = self._color_names.get(value, "")
-            description = f"{name} · {value}" if name else value
+            reference = material_reference(value)
+            description = f"{name} · {reference}" if name else reference
             button.setProperty("color", value)
             button.setEnabled(True)
             button.setAccessibleName(f"Cor recente {number}: {description}")
             button.setToolTip(
                 f"<p>{escape(description)}<br>Selecionar com a tecla {number}</p>"
             )
-            border = f"2px solid {INK}" if value == active else f"1px solid {BORDER}"
+            inactive_border = TRANSPARENT_OUTLINE if is_transparent(value) else BORDER
+            border = f"2px solid {INK}" if value == active else f"1px solid {inactive_border}"
             button.setStyleSheet(
-                f"QPushButton {{ background: {value}; color: {_number_color(color)}; "
+                f"QPushButton {{ background: {display_color(value)}; color: {_number_color(color)}; "
                 f"border: {border}; border-radius: 5px; padding: 0; "
                 "font-size: 11px; font-weight: 700; } "
                 f"QPushButton:hover {{ border: 2px solid {PINK}; }} "

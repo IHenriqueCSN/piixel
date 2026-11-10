@@ -38,7 +38,7 @@ O script primeiro empacota o aplicativo e depois compila o instalador. O resulta
 fica em:
 
 ```text
-dist\installer\Piixel-Setup-0.2.0-x64.exe
+dist\installer\Piixel-Setup-0.3.0-x64.exe
 ```
 
 O número vem de `version` em `pyproject.toml`. O compilador do Inno Setup é

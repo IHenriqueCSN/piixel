@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout,
 )
 
-from .model import normalize_color
+from .model import is_transparent, normalize_color
 from .theme import BORDER, MUTED
 
 
@@ -81,7 +81,7 @@ class CustomColorDialog(QDialog):
     def _validate_color(self, *_args):
         try:
             value = normalize_color(self.hex_edit.text().strip())
-            if value is None:
+            if value is None or is_transparent(value):
                 raise ValueError("A cor precisa ter um valor RGB.")
         except ValueError:
             self.error_label.show()
@@ -101,7 +101,7 @@ class CustomColorDialog(QDialog):
 
     def color_value(self) -> str:
         value = normalize_color(self.hex_edit.text().strip())
-        if value is None:
+        if value is None or is_transparent(value):
             raise ValueError("A cor precisa ter um valor RGB.")
         return value
 

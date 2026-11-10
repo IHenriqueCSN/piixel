@@ -30,6 +30,7 @@ No Piixelfone, ações como abrir conversas, enviar mensagens ou arquivos e rege
 - Linha reta, retângulo e elipse, com prévia, cancelamento e preenchimento opcional das formas.
 - Substituição de uma cor em todo o desenho, com prévia da quantidade de peças afetadas.
 - Paleta inicial e cores personalizadas da sessão, com opção de salvar cores nomeadas para próximas sessões.
+- Bead transparente na paleta padrão, distinta de branco e de uma célula vazia.
 - Nove cores recentes com atalhos de 1 a 9 e amostras numeradas na paleta.
 - Contagem por cor e total de peças; espaços vazios não entram na contagem.
 - Desfazer, refazer e zoom da grade.
@@ -129,7 +130,9 @@ Na tela inicial, entre no **Ateliê**. Em seguida:
 4. Consulte a contagem por cor e o total de peças enquanto desenha.
 5. Use **Arquivo → Salvar** para gravar o design `.pii` e **Arquivo → Abrir** para continuar depois.
 
-O branco é uma cor e conta como peça quando aplicado. Um quadradinho vazio é transparente e não conta como peça.
+O branco é uma cor e conta como peça quando aplicado. Um quadradinho vazio não
+tem peça e fica fora da contagem; ele é diferente da bead **Transparente**, que
+representa material físico e entra no estoque.
 
 Selecione **Balde de tinta** na barra ou pressione **G** e clique em uma célula para preencher a área da mesma cor ligada pelas laterais. Células que se tocam somente pela diagonal ficam separadas. O balde também preenche áreas vazias e funciona nas duas exibições de peças. Cada clique forma uma única ação de desfazer.
 
@@ -218,6 +221,23 @@ O botão direito sobre uma cor permite salvá-la, editar sua opção salva ou **
 
 A lista de recentes, as cores que você escolheu guardar e o tamanho configurado das peças ficam nas preferências locais do usuário, separadas dos arquivos `.pii`.
 
+## Beads transparentes
+
+**Transparente** aparece entre as cores padrão e representa uma peça física sem
+cor. Ela entra na contagem do estoque, nas medidas do design e nas cores recentes,
+e funciona com lápis, balde, formas, conta-gotas e substituição de cor. A borracha
+remove a peça e devolve a célula ao estado vazio.
+
+Na prancheta e no PNG, a bead transparente recebe um preenchimento muito claro e
+contorno azul para continuar visível. Em rosquinhas, o contorno acompanha o anel e
+o furo permanece aparente. Ela não é gravada como cor personalizada porque já faz
+parte da paleta padrão.
+
+Arquivos que usam transparência são salvos como `.pii` versão 2. O Piixel continua
+abrindo a versão 1 e ainda a utiliza para designs formados somente por cores
+opacas. Branco, transparente e vazio permanecem distintos nos dois modos de
+visualização.
+
 ## Menus e atalhos
 
 A barra compacta no topo reúne menus tradicionais e ícones das ferramentas mais usadas. Os menus abrem somente quando acionados, deixando mais espaço para a prancheta:
@@ -264,7 +284,7 @@ python -m piixelverso examples/cogumelo-do-bosque.pii
 
 ## Arquivos `.pii`
 
-O `.pii` é um formato próprio, binário e versionado. A versão 1 armazena um cabeçalho, nome em UTF-8, paleta RGB, índices das cores de cada quadradinho e um checksum CRC32 para detectar corrupção. O aplicativo valida o conteúdo ao abrir. Renomear uma imagem PNG ou outro arquivo para `.pii` não converte seu conteúdo.
+O `.pii` é um formato próprio, binário e versionado. A versão 1 armazena cores RGB; a versão 2 acrescenta o material transparente. Ambas guardam cabeçalho, nome em UTF-8, paleta, índices das peças e um checksum CRC32 para detectar corrupção. O aplicativo valida o conteúdo ao abrir. Renomear uma imagem PNG ou outro arquivo para `.pii` não converte seu conteúdo.
 
 Os arquivos ficam no local escolhido ao salvar. Faça cópias dos designs que quiser preservar em outro disco ou serviço de backup de sua preferência.
 

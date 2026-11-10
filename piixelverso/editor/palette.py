@@ -1,7 +1,10 @@
 """Default drawing colors, independent of the interface and user preferences."""
 
+from ..model import TRANSPARENT
+
 PALETTE = [
     ("Carvão", "#293C37"), ("Ardósia", "#66766F"), ("Névoa", "#B5BFB7"), ("Neve", "#FFFFFF"),
+    ("Transparente", TRANSPARENT),
     ("Terracota", "#C75B40"), ("Coral", "#E7794B"), ("Pêssego", "#F4AE87"), ("Areia", "#F4D8B2"),
     ("Mostarda", "#D5A039"), ("Sol", "#F0C65B"), ("Lima", "#B6CD70"), ("Creme", "#F8EFCA"),
     ("Floresta", "#245448"), ("Musgo", "#54856A"), ("Folha", "#85B48D"), ("Menta", "#BCDCC6"),

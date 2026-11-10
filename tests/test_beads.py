@@ -15,7 +15,8 @@ from PySide6.QtWidgets import QApplication
 
 from piixelverso.atelier import AtelierModule as MainWindow, STYLE
 from piixelverso.format import encode_design, save_design
-from piixelverso.model import PixelDesign
+from piixelverso.materials import TRANSPARENT_FILL, TRANSPARENT_OUTLINE
+from piixelverso.model import TRANSPARENT, PixelDesign
 from piixelverso.preferences import PreferencesStore
 
 
@@ -119,6 +120,48 @@ class BeadViewTests(unittest.TestCase):
         self.assertNotEqual(image.pixelColor(ring), empty)
         self.assertEqual(self.window.design.counts()["#FFFFFF"], 1)
         self.assertEqual(self.window.design.filled_count, 2)
+
+    def test_transparent_material_is_visible_selectable_counted_and_erasable(self):
+        self.assertIn(TRANSPARENT, self.window._swatches)
+        swatch = self.window._swatches[TRANSPARENT]
+        self.assertIn("Transparente", swatch.toolTip())
+        QTest.mouseClick(swatch, Qt.MouseButton.LeftButton)
+        self.app.processEvents()
+        self.assertEqual(self.window.canvas.color, TRANSPARENT)
+        self.assertEqual(self.window.active_hex.text(), "TRANSPARENTE")
+        self.assertEqual(self.window.recent_colors[0], TRANSPARENT)
+        self.assertEqual(self.window.recent_colors_widget.buttons[0].property("color"), TRANSPARENT)
+
+        self.click_cell(0, 0)
+        self.assertEqual(self.window.design.get_pixel(0, 0), TRANSPARENT)
+        self.assertEqual(self.window.design.counts()[TRANSPARENT], 1)
+        self.assertEqual(self.window.total_label.text(), "3")
+        model = self.window.count_view.model()
+        transparent_row = next(
+            row for row in range(model.rowCount())
+            if model.index(row, 0).data(Qt.ItemDataRole.UserRole)[0] == TRANSPARENT
+        )
+        self.assertEqual(model.index(transparent_row, 0).data(Qt.ItemDataRole.DisplayRole),
+                         "Transparente")
+
+        self.window.toggle_grid(False)
+        center = self.window.canvas.cell_center(0, 0)
+        square = self.window.canvas.grab().toImage()
+        self.assertEqual(square.pixelColor(center), QColor(TRANSPARENT_FILL))
+        edge = center - QPoint(self.window.canvas.cell_size // 2 - 1, 0)
+        self.assertEqual(square.pixelColor(edge), QColor(TRANSPARENT_OUTLINE))
+
+        self.set_mode("beads")
+        bead = self.window.canvas.grab().toImage()
+        empty = bead.pixelColor(self.window.canvas.cell_center(3, 3))
+        self.assertEqual(bead.pixelColor(center), empty)
+        self.assertNotEqual(bead.pixelColor(center + QPoint(self.window.canvas.cell_size // 4, 0)),
+                            empty)
+
+        self.click_cell(0, 0, Qt.MouseButton.RightButton)
+        self.assertIsNone(self.window.design.get_pixel(0, 0))
+        self.window.undo()
+        self.assertEqual(self.window.design.get_pixel(0, 0), TRANSPARENT)
 
     def test_hole_center_remains_editable_and_erasable_with_undo(self):
         self.set_mode("beads")

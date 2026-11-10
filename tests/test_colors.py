@@ -17,7 +17,7 @@ from PySide6.QtWidgets import QApplication, QDialog
 from piixelverso.atelier import AtelierModule, STYLE
 from piixelverso.colors import CustomColorDialog
 from piixelverso.format import load_design
-from piixelverso.model import PixelDesign
+from piixelverso.model import TRANSPARENT, PixelDesign
 from piixelverso.preferences import PreferencesError, PreferencesStore
 
 
@@ -113,6 +113,18 @@ class CustomColorsTests(unittest.TestCase):
         dialog.close()
         dialog.deleteLater()
         self.app.processEvents()
+
+    def test_transparent_material_is_standard_and_cannot_be_saved_as_custom(self):
+        self.assertIn(TRANSPARENT, self.module._swatches)
+        dialog = CustomColorDialog(TRANSPARENT, parent=self.module)
+        dialog.show()
+        self.app.processEvents()
+        self.assertFalse(dialog.add_button.isEnabled())
+        with self.assertRaises(PreferencesError):
+            self.module.preferences.save_color(TRANSPARENT, "Duplicada")
+        self.assertFalse(self.settings_path.exists())
+        dialog.close()
+        dialog.deleteLater()
 
     def test_saved_color_name_reloads_in_the_palette_and_material_count(self):
         color, name = "#A104E6", "Lilás do estoque"

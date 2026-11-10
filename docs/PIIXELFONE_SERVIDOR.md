@@ -22,6 +22,11 @@ o destinatário está desconectado. Não é necessário instalar um daemon no si
    conexão e crie a senha local de proteção da identidade. A URL já sugerida é
    `https://ukxwkgzwokzllprivknn.supabase.co`; todos precisam usar o mesmo projeto.
 
+Ao atualizar para o Piixel 0.3.0, execute novamente o arquivo SQL completo. Essa
+migração eleva o limite do envelope de 180.000 para 190.000 caracteres, necessário
+para enviar um `.pii` v2 máximo com beads transparentes, sem apagar conversas ou
+identidades existentes.
+
 A chave de conexão é pública por definição. Ela identifica o projeto e permite
 solicitar uma sessão; os JWTs individuais, os RPCs e a aceitação de contatos
 controlam o acesso. Ela não permite ler mensagens de outros usuários. O aplicativo
@@ -99,7 +104,7 @@ Os limites iniciais por identidade são:
 | Regeneração do número | 3 por dia |
 | Envio de mensagens | 60 por minuto e 1.000 por dia |
 | Volume de envelopes enviados | 10 MiB por dia |
-| Tamanho de um envelope em base64 | 180.000 caracteres |
+| Tamanho de um envelope em base64 | 190.000 caracteres |
 | Fila pendente de um destinatário | 5.000 envelopes |
 | Recepção por consulta | Até 10 envelopes, mais antigos primeiro |
 

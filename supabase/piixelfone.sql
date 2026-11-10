@@ -45,7 +45,7 @@ create table if not exists piixelfone_private.messages (
     delivered_at timestamptz,
     rejected_at timestamptz,
     check (sender <> recipient),
-    check (payload is null or octet_length(payload) between 56 and 180000),
+    check (payload is null or octet_length(payload) between 56 and 190000),
     check (delivered_at is null or rejected_at is null),
     check ((delivered_at is null and rejected_at is null) = (payload is not null))
 );
@@ -53,6 +53,15 @@ create index if not exists pii_pending_recipient
     on piixelfone_private.messages(recipient, created_at, id)
     where delivered_at is null and rejected_at is null;
 create index if not exists pii_sender on piixelfone_private.messages(sender);
+
+-- Atualiza instalações anteriores para comportar o maior .pii da versão 2.
+alter table piixelfone_private.messages
+    drop constraint if exists messages_payload_check;
+alter table piixelfone_private.messages
+    add constraint messages_payload_check
+    check (payload is null or octet_length(payload) between 56 and 190000) not valid;
+alter table piixelfone_private.messages
+    validate constraint messages_payload_check;
 
 create table if not exists piixelfone_private.rate_limits (
     user_id uuid not null references auth.users(id) on delete cascade,
@@ -274,7 +283,7 @@ begin
     if p_id is null or p_recipient is null or p_recipient = v_actor then
         raise exception 'PII_INVALID_MESSAGE: Mensagem inválida.';
     end if;
-    if p_payload is null or octet_length(p_payload) not between 56 and 180000
+    if p_payload is null or octet_length(p_payload) not between 56 and 190000
         or p_payload !~ '^[A-Za-z0-9+/]*={0,2}$' or length(p_payload) % 4 <> 0 then
         raise exception 'PII_INVALID_PAYLOAD: Envelope cifrado inválido ou muito grande.';
     end if;

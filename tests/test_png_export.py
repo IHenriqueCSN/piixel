@@ -13,7 +13,8 @@ from PySide6.QtCore import QSaveFile
 from PySide6.QtGui import QColor, QImage
 from PySide6.QtWidgets import QApplication
 
-from piixelverso.model import PixelDesign
+from piixelverso.materials import TRANSPARENT_FILL, TRANSPARENT_OUTLINE
+from piixelverso.model import TRANSPARENT, PixelDesign
 from piixelverso.png_export import (
     CELL_SIZE, GRID_COLOR, export_layout, format_mm, measurement_labels, occupied_bounds,
     render_png, save_png,
@@ -112,6 +113,25 @@ class PNGExportTests(unittest.TestCase):
         self.assertEqual(self.pixel(beads, x + 16, y + 6), RED)
         self.assertEqual(self.pixel(beads, x + 1, y + 1), WHITE)
         self.assertEqual(self.pixel(beads, x + CELL_SIZE + 16, y + 16), WHITE)
+
+    def test_transparent_beads_are_visible_counted_and_measured_in_both_modes(self):
+        design = PixelDesign(4, 3)
+        design.set_pixel(2, 1, TRANSPARENT)
+        self.assertEqual(design.counts(), {TRANSPARENT: 1})
+        self.assertEqual(occupied_bounds(design), (2, 1, 3, 2))
+        self.assertEqual(measurement_labels(design), ("5 mm", "5 mm"))
+        layout = export_layout(design)
+        left = layout.grid_left + 2 * CELL_SIZE
+        top = layout.grid_top + CELL_SIZE
+
+        squares = render_png(design, display_mode="squares", show_grid=False)
+        self.assertEqual(self.pixel(squares, left + 16, top + 16), TRANSPARENT_FILL)
+        self.assertEqual(self.pixel(squares, left + 1, top + 10), TRANSPARENT_OUTLINE)
+
+        beads = render_png(design, display_mode="beads", show_grid=False)
+        self.assertEqual(self.pixel(beads, left + 16, top + 16), WHITE)
+        self.assertNotEqual(self.pixel(beads, left + 16, top + 5), WHITE)
+        self.assertEqual(self.pixel(beads, layout.grid_left + 16, layout.grid_top + 16), WHITE)
 
     def test_grid_switch_changes_boundaries_in_both_display_modes(self):
         design = PixelDesign(2, 2, [RED, RED, RED, RED])

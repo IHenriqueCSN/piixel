@@ -11,12 +11,13 @@ from PySide6.QtWidgets import (
     QLabel, QSizePolicy, QVBoxLayout,
 )
 
-from .model import PixelDesign, normalize_color
+from .materials import TRANSPARENT_OUTLINE, display_color, material_reference
+from .model import PixelDesign, is_transparent, normalize_color
 from .theme import BORDER, MUTED, PINK
 
 
 class ReplaceColorDialog(QDialog):
-    """Collect RGB colors; the editor applies the replacement after acceptance."""
+    """Collect palette materials; the editor applies replacement after acceptance."""
 
     def __init__(self, design: PixelDesign, color_names: Mapping[str, str],
                  initial_target: str, parent=None, *,
@@ -63,7 +64,7 @@ class ReplaceColorDialog(QDialog):
             name = color_names.get(color, "").strip()
             short_name = metrics.elidedText(name, Qt.TextElideMode.ElideRight, 170)
             quantity = f"{count} peça" if count == 1 else f"{count} peças"
-            suffix = f"{color} · {quantity}"
+            suffix = f"{material_reference(color)} · {quantity}"
             text = f"{short_name} · {suffix}" if name else suffix
             full_text = f"{name} · {suffix}" if name else suffix
             self.source_combo.addItem(self._color_icon(color), text, color)
@@ -130,7 +131,7 @@ class ReplaceColorDialog(QDialog):
         self._validate()
 
     def _add_target_color(self, color: str, name: str) -> int:
-        """Insert before the custom-color action, reusing matching RGB entries."""
+        """Insert before the custom-color action, reusing matching materials."""
         existing = self.target_combo.findData(color)
         if existing >= 0:
             return existing
@@ -138,8 +139,9 @@ class ReplaceColorDialog(QDialog):
         short_name = self.target_combo.fontMetrics().elidedText(
             name, Qt.TextElideMode.ElideRight, 240
         )
-        text = f"{short_name} · {color}" if name else color
-        full_text = f"{name} · {color}" if name else color
+        reference = material_reference(color)
+        text = f"{short_name} · {reference}" if name else reference
+        full_text = f"{name} · {reference}" if name else reference
         index = self.target_combo.count() - 1
         self.target_combo.insertItem(index, self._color_icon(color), text, color)
         self.target_combo.setItemData(
@@ -157,8 +159,10 @@ class ReplaceColorDialog(QDialog):
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(QPen(QColor(BORDER), 1))
-        painter.setBrush(QColor(color))
+        painter.setPen(QPen(QColor(
+            TRANSPARENT_OUTLINE if is_transparent(color) else BORDER
+        ), 2 if is_transparent(color) else 1))
+        painter.setBrush(QColor(display_color(color)))
         painter.drawRoundedRect(1, 1, 16, 16, 4, 4)
         painter.end()
         return QIcon(pixmap)
@@ -212,7 +216,8 @@ class ReplaceColorDialog(QDialog):
         return not error
 
     def choose_color(self):
-        selected = QColorDialog.getColor(QColor(self._last_valid), self, "Escolher nova cor")
+        initial = QColor(display_color(self._last_valid))
+        selected = QColorDialog.getColor(initial, self, "Escolher nova cor")
         if selected.isValid():
             value = selected.name(QColor.NameFormat.HexRgb).upper()
             index = self._add_target_color(value, self._color_names.get(value, "Personalizada"))

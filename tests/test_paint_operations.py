@@ -1,6 +1,6 @@
 import unittest
 
-from piixelverso.model import PixelDesign
+from piixelverso.model import TRANSPARENT, PixelDesign
 from piixelverso.operations import flood_fill_changes, replace_color_changes
 
 
@@ -38,6 +38,12 @@ class FloodFillTests(unittest.TestCase):
             1: None, 4: None, 5: None,
         })
         self.assertEqual(flood_fill_changes(design, 2, 0, RED), {2: RED})
+
+    def test_transparent_material_can_fill_empty_regions_without_becoming_empty(self):
+        design = PixelDesign(3, 1, [None, WHITE, None])
+        self.assertEqual(flood_fill_changes(design, 0, 0, TRANSPARENT), {0: TRANSPARENT})
+        design.set_pixel(0, 0, TRANSPARENT)
+        self.assertEqual(flood_fill_changes(design, 0, 0, RED), {0: RED})
 
     def test_handles_single_cell_and_narrow_grids(self):
         for width, height in ((1, 1), (1, 4), (4, 1)):
@@ -112,6 +118,11 @@ class ReplaceColorTests(unittest.TestCase):
     def test_white_replacement_does_not_replace_empty_cells(self):
         design = PixelDesign(3, 1, [None, WHITE, None])
         self.assertEqual(replace_color_changes(design, WHITE, BLUE), {1: BLUE})
+
+    def test_transparent_material_can_be_replaced_in_both_directions(self):
+        design = PixelDesign(3, 1, [TRANSPARENT, None, RED])
+        self.assertEqual(replace_color_changes(design, TRANSPARENT, BLUE), {0: BLUE})
+        self.assertEqual(replace_color_changes(design, RED, TRANSPARENT), {2: TRANSPARENT})
 
     def test_rejects_missing_or_invalid_colors(self):
         design = PixelDesign(1, 1, [RED])

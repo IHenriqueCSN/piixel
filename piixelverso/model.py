@@ -10,15 +10,22 @@ MIN_DIMENSION = 1
 MAX_DIMENSION = 128
 MAX_NAME_BYTES = 4096
 _COLOR = re.compile(r"#[0-9a-fA-F]{6}\Z")
+TRANSPARENT = "#00FFFFFF"
 
 
 def normalize_color(color: str | None) -> str | None:
-    """Normalize uma cor RGB; ``None`` representa uma célula vazia."""
+    """Normalize uma cor RGB ou a peça transparente; ``None`` é vazio."""
     if color is None:
         return None
+    if isinstance(color, str) and color.upper() == TRANSPARENT:
+        return TRANSPARENT
     if not isinstance(color, str) or not _COLOR.fullmatch(color):
-        raise ValueError("A cor deve estar no formato #RRGGBB.")
+        raise ValueError("A cor deve estar no formato #RRGGBB ou ser uma peça transparente.")
     return color.upper()
+
+
+def is_transparent(color: str | None) -> bool:
+    return isinstance(color, str) and color.upper() == TRANSPARENT
 
 
 def validate_name(name: str) -> None:

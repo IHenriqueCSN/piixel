@@ -48,7 +48,7 @@ def replace_color_changes(
     source = normalize_color(source)
     target = normalize_color(target)
     if source is None or target is None:
-        raise ValueError("Escolha as cores de origem e destino no formato #RRGGBB.")
+        raise ValueError("Escolha materiais válidos para a origem e o destino.")
     design.validate()
     if source == target:
         return {}

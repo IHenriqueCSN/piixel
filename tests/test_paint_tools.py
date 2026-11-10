@@ -17,7 +17,8 @@ from PySide6.QtWidgets import QApplication, QDialog
 from piixelverso.app import MainWindow
 from piixelverso.atelier import AtelierModule, PALETTE, STYLE
 from piixelverso.format import encode_design, load_design
-from piixelverso.model import PixelDesign
+from piixelverso.materials import material_reference
+from piixelverso.model import TRANSPARENT, PixelDesign
 from piixelverso.preferences import PreferencesStore
 
 
@@ -349,7 +350,7 @@ class PaintToolsTests(unittest.TestCase):
                     index = dialog.target_combo.findData(color)
                     self.assertGreaterEqual(index, 0)
                     self.assertIn(label, dialog.target_combo.itemText(index))
-                    self.assertIn(color, dialog.target_combo.itemText(index))
+                    self.assertIn(material_reference(color), dialog.target_combo.itemText(index))
                     self.assertFalse(dialog.target_combo.itemIcon(index).isNull())
             named_index = dialog.target_combo.findData(named)
             self.assertGreaterEqual(named_index, 0)
@@ -377,6 +378,24 @@ class PaintToolsTests(unittest.TestCase):
         self.window.undo()
         self.assertEqual(self.window.design, original)
         self.assertTrue(self.window.history.isClean())
+
+    def test_replacement_dropdown_uses_transparent_as_source_and_target(self):
+        self.set_design(["X.S"], {"X": TRANSPARENT})
+        dialogs = []
+
+        def reject_dialog(dialog):
+            dialogs.append(dialog)
+            return QDialog.DialogCode.Rejected
+
+        with patch("piixelverso.atelier.ReplaceColorDialog.exec", new=reject_dialog):
+            self.window.show_replace_color_dialog()
+        instance = dialogs[0]
+        self.assertGreaterEqual(instance.source_combo.findData(TRANSPARENT), 0)
+        target_index = instance.target_combo.findData(TRANSPARENT)
+        self.assertGreaterEqual(target_index, 0)
+        self.assertIn("Transparente", instance.target_combo.itemText(target_index))
+        self.assertEqual(self.window.replace_color(SOURCE, TRANSPARENT), 1)
+        self.assertEqual(self.window.design.counts(), {TRANSPARENT: 2})
 
     def test_canceling_the_custom_target_picker_restores_the_previous_dropdown_choice(self):
         self.set_design(["SS.T", "S..."])

@@ -2,6 +2,7 @@
 from PySide6.QtCore import QBuffer, QIODevice, Qt
 from PySide6.QtGui import QColor, QImage, QPainter, QPen
 
+from .materials import display_color
 from .model import PixelDesign
 from .theme import BORDER, EMPTY_ALT, WHITE
 
@@ -14,7 +15,10 @@ def thumbnail_png(design: PixelDesign, width: int = 96, height: int = 72) -> byt
     for y in range(design.height):
         for x in range(design.width):
             color = design.pixels[y * design.width + x]
-            artwork.setPixelColor(x, y, QColor(color or (WHITE if (x + y) % 2 == 0 else EMPTY_ALT)))
+            visible = display_color(color) if color is not None else (
+                WHITE if (x + y) % 2 == 0 else EMPTY_ALT
+            )
+            artwork.setPixelColor(x, y, QColor(visible))
     preview = QImage(width, height, QImage.Format.Format_ARGB32_Premultiplied)
     preview.fill(QColor(WHITE))
     scaled = artwork.scaled(width - 12, height - 12,

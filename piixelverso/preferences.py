@@ -11,7 +11,7 @@ from pathlib import Path
 import tempfile
 import time
 
-from .model import normalize_color
+from .model import is_transparent, normalize_color
 
 
 MAX_RECENT_FILES = 20
@@ -79,6 +79,8 @@ def _saved_color(color: str, name: str = "") -> SavedColor:
         raise PreferencesError("A cor deve estar no formato #RRGGBB.") from error
     if normalized is None:
         raise PreferencesError("Uma célula vazia não é uma cor para salvar.")
+    if is_transparent(normalized):
+        raise PreferencesError("A bead transparente já faz parte da paleta padrão.")
     if not isinstance(name, str):
         raise PreferencesError("O nome da cor deve ser um texto.")
     name = name.strip()

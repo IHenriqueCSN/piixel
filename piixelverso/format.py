@@ -8,14 +8,18 @@ import struct
 import tempfile
 import zlib
 
-from .model import MAX_DIMENSION, MAX_NAME_BYTES, PixelDesign, normalize_color
+from .model import (
+    MAX_DIMENSION, MAX_NAME_BYTES, TRANSPARENT, PixelDesign, is_transparent,
+    normalize_color,
+)
 
 MAGIC = b"PII\x00"
-VERSION = 1
+LEGACY_VERSION = 1
+VERSION = 2
 HEADER = struct.Struct("<4sBHHHH")
 CHECKSUM = struct.Struct("<I")
 MAX_PIXELS = MAX_DIMENSION * MAX_DIMENSION
-MAX_FILE_SIZE = HEADER.size + MAX_NAME_BYTES + MAX_PIXELS * 5 + CHECKSUM.size
+MAX_FILE_SIZE = HEADER.size + MAX_NAME_BYTES + MAX_PIXELS * 6 + CHECKSUM.size
 
 
 class DesignFormatError(ValueError):
@@ -31,10 +35,16 @@ def encode_design(design: PixelDesign) -> bytes:
     normalized = [normalize_color(color) for color in design.pixels]
     palette = sorted({color for color in normalized if color is not None})
     indices = {color: index + 1 for index, color in enumerate(palette)}
-    payload = bytearray(HEADER.pack(MAGIC, VERSION, design.width, design.height, len(palette), len(name)))
+    version = VERSION if TRANSPARENT in palette else LEGACY_VERSION
+    payload = bytearray(HEADER.pack(MAGIC, version, design.width, design.height, len(palette), len(name)))
     payload.extend(name)
     for color in palette:
-        payload.extend(bytes.fromhex(color[1:]))
+        if version == LEGACY_VERSION:
+            payload.extend(bytes.fromhex(color[1:]))
+        elif is_transparent(color):
+            payload.extend(bytes.fromhex(TRANSPARENT[1:]))
+        else:
+            payload.extend(b"\xFF" + bytes.fromhex(color[1:]))
     for color in normalized:
         payload.extend(struct.pack("<H", 0 if color is None else indices[color]))
     payload.extend(CHECKSUM.pack(zlib.crc32(payload) & 0xFFFFFFFF))
@@ -49,7 +59,7 @@ def decode_design(data: bytes) -> PixelDesign:
     magic, version, width, height, palette_count, name_size = HEADER.unpack_from(data)
     if magic != MAGIC:
         raise DesignFormatError("Este arquivo não é um design .pii.")
-    if version != VERSION:
+    if version not in (LEGACY_VERSION, VERSION):
         raise DesignFormatError(f"A versão {version} do formato .pii não é suportada.")
     if not (1 <= width <= MAX_DIMENSION and 1 <= height <= MAX_DIMENSION):
         raise DesignFormatError("As dimensões da grade são inválidas.")
@@ -58,7 +68,8 @@ def decode_design(data: bytes) -> PixelDesign:
         raise DesignFormatError("A paleta contém mais cores que a grade comporta.")
     if name_size > MAX_NAME_BYTES:
         raise DesignFormatError("O nome do design excede o tamanho permitido.")
-    expected_size = HEADER.size + name_size + palette_count * 3 + count * 2 + CHECKSUM.size
+    palette_item_size = 3 if version == LEGACY_VERSION else 4
+    expected_size = HEADER.size + name_size + palette_count * palette_item_size + count * 2 + CHECKSUM.size
     if len(data) != expected_size:
         raise DesignFormatError("O tamanho do arquivo não corresponde ao conteúdo declarado.")
     checksum = CHECKSUM.unpack_from(data, len(data) - CHECKSUM.size)[0]
@@ -72,8 +83,17 @@ def decode_design(data: bytes) -> PixelDesign:
     offset += name_size
     palette = [None]
     for _ in range(palette_count):
-        palette.append("#" + bytes(data[offset:offset + 3]).hex().upper())
-        offset += 3
+        raw = bytes(data[offset:offset + palette_item_size])
+        if version == LEGACY_VERSION:
+            color = "#" + raw.hex().upper()
+        elif raw == bytes.fromhex(TRANSPARENT[1:]):
+            color = TRANSPARENT
+        elif raw[0] == 0xFF:
+            color = "#" + raw[1:].hex().upper()
+        else:
+            raise DesignFormatError("A paleta contém uma transparência não suportada.")
+        palette.append(color)
+        offset += palette_item_size
     if len(set(palette[1:])) != palette_count:
         raise DesignFormatError("A paleta contém cores duplicadas.")
     pixels = []

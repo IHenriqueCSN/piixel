@@ -5,7 +5,9 @@ from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPainterPath, QPen, QRadialGradient
 from PySide6.QtWidgets import QWidget
 
+from .materials import TRANSPARENT_OUTLINE, display_color
 from .model import PixelDesign
+from .model import is_transparent
 from .operations import flood_fill_changes
 from .shapes import SHAPE_TOOLS, shape_cells
 from .theme import BORDER, EMPTY_ALT, GRID, MUTED, PINK, WHITE
@@ -93,15 +95,19 @@ class PixelCanvas(QWidget):
         outer_outline = QPainterPath(ring)
         ring.addEllipse(hole)
 
-        base = QColor(color)
+        base = QColor(display_color(color))
         gradient = QRadialGradient(QPointF(left + size * 0.35, top + size * 0.28),
                                    size * 0.76)
         gradient.setColorAt(0, base.lighter(108))
         gradient.setColorAt(0.55, base)
         gradient.setColorAt(1, base.darker(108))
-        outline = QColor(BORDER) if base.lightness() > 235 else base.darker(115)
+        outline = QColor(TRANSPARENT_OUTLINE) if is_transparent(color) else (
+            QColor(BORDER) if base.lightness() > 235 else base.darker(115)
+        )
         painter.fillPath(ring, gradient)
         painter.strokePath(outer_outline, QPen(outline, max(0.4, min(0.8, size * 0.03))))
+        if is_transparent(color):
+            painter.strokePath(ring, QPen(outline, max(0.7, min(1.2, size * 0.05))))
 
     def cell_at(self, point: QPoint):
         x = (point.x() - self.MARGIN) // self.cell_size
@@ -145,10 +151,16 @@ class PixelCanvas(QWidget):
                 index = y * width + x
                 color = self._shape_preview.get(index, self.design.pixels[index])
                 background = WHITE if (x + y) % 2 == 0 else EMPTY_ALT
-                painter.fillRect(m + x * size, m + y * size, size, size,
-                                 QColor(background if beads else color or background))
+                left, top = m + x * size, m + y * size
+                fill = background if beads or color is None else display_color(color)
+                painter.fillRect(left, top, size, size, QColor(fill))
                 if beads and color is not None:
-                    self._paint_bead(painter, m + x * size, m + y * size, size, color)
+                    self._paint_bead(painter, left, top, size, color)
+                elif is_transparent(color):
+                    painter.setPen(QPen(QColor(TRANSPARENT_OUTLINE), max(1, min(2, size // 8))))
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+                    painter.drawRect(left + 1, top + 1, max(0, size - 3), max(0, size - 3))
+                    painter.setPen(Qt.PenStyle.NoPen)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         if self.show_grid and size >= 7:
             painter.setPen(QPen(QColor(GRID), 1))

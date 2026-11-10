@@ -13,7 +13,7 @@ import unittest
 from uuid import UUID, uuid4
 
 from piixelverso.format import MAX_FILE_SIZE, encode_design
-from piixelverso.model import PixelDesign
+from piixelverso.model import TRANSPARENT, PixelDesign
 from piixelverso.piixelfone.config import DEFAULT_URL
 from piixelverso.piixelfone.crypto import Identity, seal, unseal
 from piixelverso.piixelfone.service import PhoneError, PhoneService
@@ -429,14 +429,15 @@ class PhoneServiceTests(unittest.TestCase):
 
     def test_largest_supported_pii_fits_envelope_and_encrypted_history_limits(self):
         self.accept_contacts()
-        design = PixelDesign(128, 128, [f"#{index:06X}" for index in range(128 * 128)], "x" * 4096)
+        colors = [TRANSPARENT] + [f"#{index:06X}" for index in range(128 * 128 - 1)]
+        design = PixelDesign(128, 128, colors, "x" * 4096)
         data = encode_design(design)
         self.assertEqual(len(data), MAX_FILE_SIZE)
         path = self.root / "maximo.pii"
         path.write_bytes(data)
         self.alice.send_file(self.bob_id, str(path))
         row = next(iter(self.mailbox.messages.values()))
-        self.assertLessEqual(len(row["payload"]), 180000)
+        self.assertLessEqual(len(row["payload"]), 190000)
         self.bob.sync()
         self.assertEqual(self.bob.attachment(row["id"]), (path.name, data))
         self.alice = self.reopen("alice")

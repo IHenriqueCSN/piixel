@@ -11,7 +11,8 @@ from PySide6.QtGui import (
     QPen, QPolygon,
 )
 
-from .model import PixelDesign
+from .materials import TRANSPARENT_OUTLINE, display_color
+from .model import PixelDesign, is_transparent
 from .preferences import DEFAULT_PIECE_SIZE_MM, validate_piece_size_mm
 
 
@@ -189,7 +190,7 @@ def _paint_dimensions(painter: QPainter, layout: ExportLayout) -> None:
 
 
 def _paint_bead(painter: QPainter, left: int, top: int, color: str) -> None:
-    """Use the canvas's bead proportions while preserving the exact RGB fill."""
+    """Use the canvas proportions and keep transparent physical pieces visible."""
     size = CELL_SIZE
     outer = QRectF(left + size * 0.06, top + size * 0.06, size * 0.88, size * 0.88)
     hole_size = size * 0.36
@@ -199,7 +200,11 @@ def _paint_bead(painter: QPainter, left: int, top: int, color: str) -> None:
     ring.setFillRule(Qt.FillRule.OddEvenFill)
     ring.addEllipse(outer)
     ring.addEllipse(hole)
-    painter.fillPath(ring, QColor(color))
+    painter.fillPath(ring, QColor(display_color(color)))
+    if is_transparent(color):
+        painter.setPen(QPen(QColor(TRANSPARENT_OUTLINE), 2))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPath(ring)
 
 
 def render_png(
@@ -236,7 +241,11 @@ def render_png(
                 if beads:
                     _paint_bead(painter, left, top, color)
                 else:
-                    painter.fillRect(left, top, CELL_SIZE, CELL_SIZE, QColor(color))
+                    painter.fillRect(left, top, CELL_SIZE, CELL_SIZE, QColor(display_color(color)))
+                    if is_transparent(color):
+                        painter.setPen(QPen(QColor(TRANSPARENT_OUTLINE), 2))
+                        painter.setBrush(Qt.BrushStyle.NoBrush)
+                        painter.drawRect(left + 1, top + 1, CELL_SIZE - 3, CELL_SIZE - 3)
         if show_grid:
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
             painter.setPen(QPen(QColor(GRID_COLOR), 1))

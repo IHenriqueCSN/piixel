@@ -83,7 +83,17 @@ O Piixelfone fica isolado em `piixelfone/`. `page.py` constrói a interface e en
 
 `supabase/piixelfone.sql` mantém tabelas em schema privado, com RLS e sem acesso direto por clientes. RPCs autorizam cada operação pelo JWT autenticado. O conteúdo cifrado permanece até o destinatário confirmar ou recusar; depois disso fica apenas o estado e o hash para preservar a idempotência. Números antigos ficam reservados permanentemente. O [guia de instalação](PIIXELFONE_SERVIDOR.md) descreve a implantação e as limitações criptográficas.
 
-`format.py` continua responsável pelo `.pii` versionado e pela gravação atômica. `preferences.py` continua guardando arquivos recentes, cores salvas e tamanho das peças. `png_export.py` continua renderizando e gravando o PNG com as mesmas medidas, cores e opções.
+`format.py` continua responsável pelo `.pii` versionado e pela gravação atômica.
+A versão 1 usa paleta RGB; a versão 2 acrescenta a bead transparente com uma
+entrada ARGB explícita. `None`, branco e transparente permanecem estados distintos
+no modelo. Designs sem transparência continuam sendo gravados como v1. O pequeno
+`materials.py` traduz o material especial para nome, preenchimento claro e contorno
+visível, sem espalhar um RGB fictício pelas regras do documento.
+
+`preferences.py` continua guardando arquivos recentes, cores salvas e tamanho das
+peças. A transparência é parte da paleta padrão e não entra nas cores personalizadas.
+`png_export.py` inclui a peça transparente nos limites e medidas e a representa
+visualmente no PNG, em vez de produzir um pixel invisível.
 
 `update.py` trata a versão, o manifesto de GitHub Releases, os limites de download e
 a validação SHA-256 sem depender do Qt. `update_ui.py` executa rede e disco fora da
@@ -93,7 +103,9 @@ próprio Windows, que espera o processo principal liberar o `AppMutex`; o Inno S
 então substitui a aplicação e reabre o executável instalado. Esse fluxo fica
 desativado no código-fonte e fora do pacote Windows congelado.
 
-Esta reorganização não altera formatos, chaves das preferências, limites das pranchetas, mensagens, menus ou atalhos. Os testes anteriores permanecem nos mesmos arquivos; os novos testes verificam a sessão, as ações e o contrato dos módulos isoladamente.
+As chaves das preferências, limites das pranchetas, menus e atalhos permanecem
+compatíveis. Os testes verificam as duas versões do `.pii`, a separação entre vazio,
+branco e transparente e o uso do material em edição, contagem e exportação.
 
 ## Comparação antes/depois
 

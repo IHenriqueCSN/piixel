@@ -15,6 +15,8 @@ from .crypto import CryptoError, Vault, fingerprint, seal, unseal
 from .store import Store
 from .transport import Transport, TransportError
 
+MAX_ENVELOPE_BYTES = 190000
+
 
 class PhoneError(ValueError):
     """An actionable message that may be presented directly to the user."""
@@ -328,7 +330,7 @@ class PhoneService:
         content = dict(body, v=1, id=str(uuid4()), **{"from": sender, "to": peer["user_id"]})
         self._validate_content(content, content["id"], sender, peer["user_id"])
         payload = seal(self._vault.identity, peer["public_key"], content)
-        if len(payload) > 180000:
+        if len(payload) > MAX_ENVELOPE_BYTES:
             raise PhoneError("O anexo excede o tamanho permitido para envio.")
         record = dict(content, peer_id=peer["user_id"], direction="outgoing", status="queued",
                       created_at=datetime.now(timezone.utc).isoformat(), payload=payload)

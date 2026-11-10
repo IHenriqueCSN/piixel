@@ -21,7 +21,8 @@ from .editor.session import EditorSession
 from .editor.view import AtelierView, VIEW_ATTRIBUTES
 from .export_dialog import ExportPngDialog
 from .format import DesignFormatError, load_design, save_design
-from .model import PixelDesign, normalize_color, validate_name
+from .materials import TRANSPARENT_OUTLINE, display_color, material_reference
+from .model import PixelDesign, is_transparent, normalize_color, validate_name
 from .module_api import ModuleHomeState, ModulePage
 from .operations import replace_color_changes
 from .png_export import save_png
@@ -213,19 +214,28 @@ class AtelierModule(ModulePage):
             action.setEnabled(self._active and index < len(self._recent_colors))
 
     def select_color(self, color, *, remember=True):
-        color = color.upper()
+        color = normalize_color(color)
+        if color is None:
+            raise ValueError("Uma célula vazia não pode ser selecionada como material.")
         if remember:
             self._recent_colors = [color] + [value for value in self._recent_colors if value != color][:8]
-        self.canvas.color = color.upper()
-        self.active_hex.setText(color.upper())
-        name = self._custom_color_names.get(color.upper(), "")
+        self.canvas.color = color
+        self.active_hex.setText(material_reference(color))
+        name = "Bead transparente" if is_transparent(color) else self._custom_color_names.get(color, "")
         self.active_color_name.setText(name)
         self.active_color_name.setToolTip(f"<p>{escape(name)}</p>" if name else "")
         self.active_color_name.setVisible(bool(name))
-        self.active_swatch.setStyleSheet(f"background: {color}; border: 1px solid {BORDER}; border-radius: 5px;")
+        active_border = TRANSPARENT_OUTLINE if is_transparent(color) else BORDER
+        self.active_swatch.setStyleSheet(
+            f"background: {display_color(color)}; border: 2px solid {active_border}; border-radius: 5px;"
+        )
         for value, swatch in self._swatches.items():
-            border = f"2px solid {INK}" if value == color.upper() else f"1px solid {BORDER}"
-            swatch.setStyleSheet(f"QPushButton {{ background: {value}; border: {border}; border-radius: 5px; }} QPushButton:hover {{ border: 2px solid {PINK}; }}")
+            base_border = TRANSPARENT_OUTLINE if is_transparent(value) else BORDER
+            border = f"2px solid {INK}" if value == color else f"1px solid {base_border}"
+            swatch.setStyleSheet(
+                f"QPushButton {{ background: {display_color(value)}; border: {border}; "
+                f"border-radius: 5px; }} QPushButton:hover {{ border: 2px solid {PINK}; }}"
+            )
         self.recent_colors_widget.set_colors(self._recent_colors, self.canvas.color)
         self._sync_recent_color_actions()
 
@@ -234,7 +244,7 @@ class AtelierModule(ModulePage):
         self.select_tool("pencil")
 
     def custom_color(self):
-        self._edit_custom_color(self.canvas.color)
+        self._edit_custom_color("#E7794B" if is_transparent(self.canvas.color) else self.canvas.color)
 
     def show_replace_color_dialog(self):
         self.canvas.finish_stroke()
@@ -294,7 +304,9 @@ class AtelierModule(ModulePage):
             note = "Salva para próximas sessões"
         else:
             note = "Cor da paleta inicial" if color in COLOR_NAMES else "Disponível nesta sessão"
-        self._swatches[color].setToolTip(f"<p>{escape(name)} · {color}<br>{note}</p>")
+        self._swatches[color].setToolTip(
+            f"<p>{escape(name)} · {material_reference(color)}<br>{note}</p>"
+        )
 
     def add_custom_color(self, color: str, name: str = "", persist: bool = False) -> None:
         value = normalize_color(color)
@@ -343,6 +355,8 @@ class AtelierModule(ModulePage):
         self._refresh_color_tooltip(value)
 
     def _show_color_menu(self, color, position):
+        if is_transparent(color):
+            return
         menu = QMenu(self)
         save = menu.addAction("Editar cor salva…" if color in self._saved_colors else "Salvar cor…")
         save.triggered.connect(lambda _checked=False: self._edit_custom_color(color, save_for_future=True))

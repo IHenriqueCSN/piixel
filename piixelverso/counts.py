@@ -13,6 +13,8 @@ from PySide6.QtWidgets import (
     QTableView,
 )
 
+from .materials import TRANSPARENT_OUTLINE, display_color, material_reference
+from .model import is_transparent
 from .theme import BORDER, HOVER, INK, MUTED, WHITE
 
 class _CountsModel(QAbstractTableModel):
@@ -36,7 +38,7 @@ class _CountsModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.DisplayRole:
             return name if index.column() == 0 else f"{count:,}".replace(",", ".")
         if role in (Qt.ItemDataRole.ToolTipRole, Qt.ItemDataRole.AccessibleTextRole):
-            return f"{name} · {color} · {count:,} peças".replace(",", ".")
+            return f"{name} · {material_reference(color)} · {count:,} peças".replace(",", ".")
         return None
 
     def set_counts(self, counts: dict[str, int]):
@@ -66,8 +68,10 @@ class _CountsDelegate(QStyledItemDelegate):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         if index.column() == 0:
-            painter.setPen(QPen(QColor(BORDER), 1))
-            painter.setBrush(QColor(color))
+            painter.setPen(QPen(QColor(
+                TRANSPARENT_OUTLINE if is_transparent(color) else BORDER
+            ), 2 if is_transparent(color) else 1))
+            painter.setBrush(QColor(display_color(color)))
             painter.drawRoundedRect(QRect(rect.x() + 1, rect.y() + 12, 27, 27), 6, 6)
 
             name_font = QFont(option.font)
@@ -84,7 +88,7 @@ class _CountsDelegate(QStyledItemDelegate):
             hex_font.setWeight(QFont.Weight.Normal)
             painter.setFont(hex_font)
             painter.setPen(QColor(MUTED))
-            painter.drawText(rect.x() + 40, rect.y() + 38, color)
+            painter.drawText(rect.x() + 40, rect.y() + 38, material_reference(color))
         else:
             count_font = QFont(option.font)
             count_font.setPixelSize(14)

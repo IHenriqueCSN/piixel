@@ -1,6 +1,6 @@
 import unittest
 
-from piixelverso.model import PixelDesign
+from piixelverso.model import TRANSPARENT, PixelDesign, is_transparent, normalize_color
 
 
 class ModelTests(unittest.TestCase):
@@ -22,6 +22,16 @@ class ModelTests(unittest.TestCase):
         design.set_pixel(0, 0, None)
         self.assertEqual(design.counts(), {"#AABBCC": 1, "#000000": 1})
         self.assertFalse(design.is_empty)
+
+    def test_transparent_piece_is_physical_and_distinct_from_empty_and_white(self):
+        design = PixelDesign(3, 1, [None, TRANSPARENT.lower(), "#FFFFFF"])
+        self.assertEqual(design.pixels, [None, TRANSPARENT, "#FFFFFF"])
+        self.assertEqual(design.counts(), {TRANSPARENT: 1, "#FFFFFF": 1})
+        self.assertEqual(design.filled_count, 2)
+        self.assertFalse(design.is_empty)
+        self.assertTrue(is_transparent(design.get_pixel(1, 0)))
+        self.assertFalse(is_transparent(None))
+        self.assertEqual(normalize_color(TRANSPARENT.lower()), TRANSPARENT)
 
     def test_clone_is_independent(self):
         original = PixelDesign(1, 1, ["#00ff00"], "Coração ♥")
