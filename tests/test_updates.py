@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import hashlib
-import base64
 import io
 import json
 import os
@@ -13,7 +12,7 @@ import tempfile
 import time
 import tomllib
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import subprocess
 import sys
 
@@ -214,7 +213,7 @@ class UpdateControllerTests(unittest.TestCase):
         self.assertTrue(controller.check_automatically())
         self.assertTrue(controller.busy)
         self.wait_until(lambda: not controller.busy)
-        self.assertEqual(client.version, "0.3.1")
+        self.assertEqual(client.version, "0.3.2")
         self.assertIn("versão mais recente", statuses[-1])
         controller.shutdown()
 
@@ -238,6 +237,34 @@ class UpdateControllerTests(unittest.TestCase):
             launch.assert_not_called()
         self.assertEqual(self.window.close_checks, 1)
 
+    def test_install_keeps_app_open_when_helper_does_not_confirm_startup(self):
+        controller = UpdateController(self.window, supported=True)
+        installer = Path(self.directory.name) / "Piixel-Setup-0.4.0-x64.exe"
+        installer.write_bytes(b"MZ")
+        with patch("piixelverso.startup.launch_update_after_exit", return_value=False), \
+             patch("piixelverso.update_ui.QMessageBox.warning") as warning, \
+             patch.object(self.window, "close") as close, \
+             patch("piixelverso.update_ui.QApplication.quit") as quit_app:
+            self.assertFalse(controller._install(installer))
+        warning.assert_called_once()
+        close.assert_not_called()
+        quit_app.assert_not_called()
+
+    def test_previous_helper_error_is_reported_once_after_restart(self):
+        controller = UpdateController(self.window, supported=True)
+        error_file = self.window.preferences.path.parent / "update-error.txt"
+        error_file.write_text(
+            "O instalador encerrou com o código 5.\nLog: C:\\dados\\install.log",
+            encoding="utf-8-sig",
+        )
+        with patch("piixelverso.update_ui.QMessageBox") as message_box:
+            self.assertTrue(controller.show_previous_install_error())
+        self.assertFalse(error_file.exists())
+        shown = message_box.return_value.setText.call_args.args[0]
+        self.assertIn("código 5", shown)
+        self.assertIn("install.log", shown)
+        self.assertFalse(controller.show_previous_install_error())
+
 
 class WindowsUpdateLaunchTests(unittest.TestCase):
     def test_external_powershell_waits_for_the_app_then_runs_and_restarts(self):
@@ -250,23 +277,54 @@ class WindowsUpdateLaunchTests(unittest.TestCase):
             powershell = root / "Windows" / "System32/WindowsPowerShell/v1.0/powershell.exe"
             powershell.parent.mkdir(parents=True)
             powershell.write_bytes(b"MZ")
+            ready = root / "piixel-update-helper.ready"
+
+            def acknowledge(*_args, **_kwargs):
+                ready.write_text("ready", encoding="ascii")
+                return Mock(poll=Mock(return_value=None))
+
             with patch.object(startup.sys, "platform", "win32"), \
                  patch.object(startup.sys, "frozen", True, create=True), \
                  patch.dict(startup.os.environ, {"SystemRoot": str(root / "Windows")}), \
                  patch.object(startup.subprocess, "CREATE_NO_WINDOW", 1, create=True), \
                  patch.object(startup.subprocess, "DETACHED_PROCESS", 2, create=True), \
                  patch.object(startup.subprocess, "CREATE_NEW_PROCESS_GROUP", 4, create=True), \
-                 patch.object(startup.subprocess, "Popen") as popen:
+                 patch.object(startup.subprocess, "Popen", side_effect=acknowledge) as popen:
                 self.assertTrue(startup.launch_update_after_exit(installer))
             command = popen.call_args.args[0]
             self.assertEqual(Path(command[0]), powershell)
-            encoded = command[command.index("-EncodedCommand") + 1]
-            script = base64.b64decode(encoded).decode("utf-16le")
+            self.assertEqual(command[command.index("-ExecutionPolicy") + 1], "Bypass")
+            helper = Path(command[command.index("-File") + 1])
+            script = helper.read_text(encoding="utf-8-sig")
             self.assertIn(f"Wait-Process -Id {os.getpid()}", script)
             self.assertIn(str(installer.resolve()), script)
             self.assertIn("/SILENT", script)
-            self.assertIn("Start-Process -FilePath $restart", script)
+            self.assertIn("$logArgument", script)
+            self.assertIn("Set-Content -LiteralPath $errorFile", script)
+            self.assertIn("Restart-Piixel", script)
+            self.assertFalse(ready.exists())
             self.assertEqual(popen.call_args.kwargs["creationflags"], 7)
+
+    def test_launcher_refuses_to_close_when_powershell_exits_without_handshake(self):
+        from piixelverso import startup
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            installer = root / "Piixel-Setup-0.4.0-x64.exe"
+            installer.write_bytes(b"MZ")
+            powershell = root / "Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+            powershell.parent.mkdir(parents=True)
+            powershell.write_bytes(b"MZ")
+            process = Mock(poll=Mock(return_value=1), terminate=Mock())
+            with patch.object(startup.sys, "platform", "win32"), \
+                 patch.object(startup.sys, "frozen", True, create=True), \
+                 patch.dict(startup.os.environ, {"SystemRoot": str(root / "Windows")}), \
+                 patch.object(startup.subprocess, "CREATE_NO_WINDOW", 1, create=True), \
+                 patch.object(startup.subprocess, "DETACHED_PROCESS", 2, create=True), \
+                 patch.object(startup.subprocess, "CREATE_NEW_PROCESS_GROUP", 4, create=True), \
+                 patch.object(startup.subprocess, "Popen", return_value=process):
+                self.assertFalse(startup.launch_update_after_exit(installer))
+            process.terminate.assert_called_once()
 
     def test_launcher_rejects_source_builds_and_unexpected_files(self):
         from piixelverso import startup

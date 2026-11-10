@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import os
 from pathlib import Path
 import subprocess
 import sys
 import threading
+import time
 from contextlib import contextmanager
 
 
@@ -18,6 +18,50 @@ _INSTALLER_MUTEX = "Piixel.Piixelverso.Desktop"
 
 def _powershell_literal(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
+
+
+def _update_helper_script(*, installer: Path, restart: Path, ready: Path,
+                          error_file: Path, install_log: Path, process_id: int) -> str:
+    """Build a readable helper with a startup handshake and durable diagnostics."""
+    values = {
+        "installer": installer,
+        "restart": restart,
+        "ready": ready,
+        "errorFile": error_file,
+        "installLog": install_log,
+    }
+    assignments = ";".join(
+        f"${name}={_powershell_literal(str(value))}" for name, value in values.items()
+    )
+    return (
+        "$ErrorActionPreference='Stop';"
+        f"{assignments};"
+        "Set-Content -LiteralPath $ready -Value 'ready' -Encoding Ascii;"
+        "function Restart-Piixel {"
+        "if(Test-Path -LiteralPath $restart){"
+        "Start-Process -FilePath $restart -WorkingDirectory (Split-Path -Parent $restart)}};"
+        "try{"
+        f"Wait-Process -Id {process_id} -ErrorAction SilentlyContinue;"
+        "Start-Sleep -Milliseconds 350;"
+        "$logArgument='/LOG=\"'+$installLog+'\"';"
+        "$result=Start-Process -FilePath $installer -ArgumentList "
+        "@('/SP-','/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/CLOSEAPPLICATIONS',$logArgument) "
+        "-Wait -PassThru;"
+        "if($result.ExitCode -eq 0){"
+        "Remove-Item -LiteralPath $errorFile -Force -ErrorAction SilentlyContinue;"
+        "Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue;"
+        "Restart-Piixel"
+        "}else{"
+        "$message='O instalador encerrou com o código '+$result.ExitCode+'.'+"
+        "[Environment]::NewLine+'Log: '+$installLog;"
+        "Set-Content -LiteralPath $errorFile -Value $message -Encoding UTF8;"
+        "Restart-Piixel}"
+        "}catch{"
+        "$message='Falha ao executar o instalador: '+$_.Exception.Message+"
+        "[Environment]::NewLine+'Log: '+$installLog;"
+        "Set-Content -LiteralPath $errorFile -Value $message -Encoding UTF8;"
+        "Restart-Piixel}"
+    )
 
 
 def launch_update_after_exit(installer: str | Path) -> bool:
@@ -39,24 +83,21 @@ def launch_update_after_exit(installer: str | Path) -> bool:
     powershell = Path(system_root) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
     if not powershell.is_file():
         return False
-    installer_value = _powershell_literal(str(path))
-    restart_value = _powershell_literal(str(restart))
-    script = (
-        f"$installer={installer_value};$restart={restart_value};"
-        f"Wait-Process -Id {os.getpid()} -ErrorAction SilentlyContinue;"
-        "Start-Sleep -Milliseconds 250;"
-        "$result=Start-Process -FilePath $installer -ArgumentList "
-        "@('/SP-','/SILENT','/SUPPRESSMSGBOXES','/NORESTART','/CLOSEAPPLICATIONS') "
-        "-Wait -PassThru;"
-        "if($result.ExitCode -eq 0){"
-        "Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue;"
-        "Start-Process -FilePath $restart}"
+    helper = path.parent / "piixel-update-helper.ps1"
+    ready = path.parent / "piixel-update-helper.ready"
+    error_file = path.parent.parent / "update-error.txt"
+    install_log = path.parent / "piixel-update-install.log"
+    script = _update_helper_script(
+        installer=path, restart=restart, ready=ready, error_file=error_file,
+        install_log=install_log, process_id=os.getpid(),
     )
-    encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
     try:
-        subprocess.Popen(
-            [str(powershell), "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
-             "-EncodedCommand", encoded],
+        ready.unlink(missing_ok=True)
+        error_file.unlink(missing_ok=True)
+        helper.write_text(script, encoding="utf-8-sig")
+        process = subprocess.Popen(
+            [str(powershell), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+             "-WindowStyle", "Hidden", "-File", str(helper)],
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             close_fds=True,
             creationflags=(subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS |
@@ -64,7 +105,25 @@ def launch_update_after_exit(installer: str | Path) -> bool:
         )
     except OSError:
         return False
-    return True
+
+    # Do not close Piixel until PowerShell proves that it parsed and started the
+    # helper. Popen alone only proves that Windows accepted the process request.
+    deadline = time.monotonic() + 2.0
+    while time.monotonic() < deadline:
+        if ready.is_file():
+            try:
+                ready.unlink()
+            except OSError:
+                pass
+            return True
+        if process.poll() is not None:
+            break
+        time.sleep(0.025)
+    try:
+        process.terminate()
+    except OSError:
+        pass
+    return False
 
 
 @contextmanager

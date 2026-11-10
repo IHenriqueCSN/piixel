@@ -60,6 +60,46 @@ finally:
     & $PythonExecutable -c $smokeCode $application $dataRoot $design
     if ($LASTEXITCODE -ne 0) { throw "O teste do aplicativo instalado falhou." }
 
+    # Exercise the same detached helper used by the frozen application. This
+    # catches PowerShell parsing, handshake, Inno arguments, replacement of an
+    # existing installation and restart failures in a real Windows session.
+    $updateRoot = Join-Path $dataRoot "updates"
+    New-Item -ItemType Directory -Path $updateRoot -Force | Out-Null
+    $updateInstaller = Join-Path $updateRoot $installers[0].Name
+    Copy-Item -LiteralPath $installers[0].FullName -Destination $updateInstaller
+    $updateCode = @'
+import pathlib, sys
+from unittest.mock import patch
+from piixelverso import startup
+
+application, installer = map(pathlib.Path, sys.argv[1:])
+with patch.object(startup.sys, "frozen", True, create=True), \
+     patch.object(startup.sys, "executable", str(application)):
+    if not startup.launch_update_after_exit(installer):
+        raise RuntimeError("O auxiliar não confirmou o início da atualização.")
+print("Auxiliar confirmou o início; encerrando o processo de origem.")
+'@
+    & $PythonExecutable -c $updateCode $application $updateInstaller
+    if ($LASTEXITCODE -ne 0) { throw "O lançamento da atualização falhou." }
+
+    $updateDeadline = [DateTime]::UtcNow.AddSeconds(90)
+    while ((Test-Path -LiteralPath $updateInstaller) -and [DateTime]::UtcNow -lt $updateDeadline) {
+        Start-Sleep -Milliseconds 200
+    }
+    $updateError = Join-Path $dataRoot "update-error.txt"
+    if (Test-Path -LiteralPath $updateError) {
+        throw "O auxiliar registrou uma falha: $(Get-Content -LiteralPath $updateError -Raw)"
+    }
+    if (Test-Path -LiteralPath $updateInstaller) { throw "A atualização não concluiu no prazo esperado." }
+    Start-Sleep -Seconds 3
+    $restarted = @(Get-Process -Name "Piixel" -ErrorAction SilentlyContinue)
+    if ($restarted.Count -eq 0) { throw "O Piixel não foi reaberto depois da atualização." }
+    $restarted | Stop-Process -Force
+    if (-not (Test-Path -LiteralPath (Join-Path $updateRoot "piixel-update-install.log"))) {
+        throw "O instalador atualizado não gerou o log esperado."
+    }
+    Write-Host "Atualização silenciosa e reinicialização verificadas em uma instalação existente."
+
     $uninstaller = Join-Path $installRoot "unins000.exe"
     if (-not (Test-Path -LiteralPath $uninstaller)) { throw "O desinstalador não foi criado." }
     $removal = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait -PassThru

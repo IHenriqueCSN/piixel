@@ -38,7 +38,7 @@ O script primeiro empacota o aplicativo e depois compila o instalador. O resulta
 fica em:
 
 ```text
-dist\installer\Piixel-Setup-0.3.1-x64.exe
+dist\installer\Piixel-Setup-0.3.2-x64.exe
 ```
 
 O número vem de `version` em `pyproject.toml`. O compilador do Inno Setup é
@@ -79,6 +79,19 @@ exigir uma conta do GitHub.
 O programa compara versões numericamente, exige que a tag, os nomes dos arquivos
 e a versão do instalador coincidam e valida o SHA-256 antes de executar qualquer
 arquivo. Uma Release incompleta ou um checksum diferente é recusado.
+
+Antes de fechar o aplicativo, o atualizador aguarda a confirmação de que o
+auxiliar do Windows começou a executar. Se essa confirmação não chegar, o Piixel
+permanece aberto e informa o caminho do instalador já verificado. Se o Inno Setup
+falhar depois do fechamento, o auxiliar reabre o Piixel com o código do erro e
+mantém o log em
+`%LOCALAPPDATA%\Piixelverso\Piixel\updates\piixel-update-install.log`.
+
+As versões 0.3.0 e 0.3.1 não tinham essa confirmação nem exibiam falhas do
+instalador. Se uma atualização iniciada por uma dessas versões fechar o Piixel sem
+concluir, execute manualmente o instalador que ficou em
+`%LOCALAPPDATA%\Piixelverso\Piixel\updates` uma única vez. A versão 0.3.2 corrige
+esse fluxo para as atualizações seguintes.
 
 A versão 0.2.0 inaugura o atualizador. Quem tiver a versão 0.1.0 precisa instalar
 a 0.2.0 manualmente uma única vez; as versões posteriores já poderão ser obtidas

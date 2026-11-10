@@ -191,11 +191,38 @@ class UpdateController(QObject):
             self.window.cancel_update_close()
             QMessageBox.warning(
                 self.window, "Não foi possível iniciar a atualização",
-                "O instalador foi verificado, mas o processo de atualização não pôde ser iniciado.",
+                "O instalador foi verificado, mas o Windows não confirmou o início da atualização.\n\n"
+                "O Piixel continuará aberto. Você também pode executar o instalador manualmente em:\n"
+                f"{installer}",
             )
             return False
         self.window.close()
         QApplication.quit()
+        return True
+
+    def show_previous_install_error(self) -> bool:
+        """Report a helper failure after it safely reopens the application."""
+        error_file = self.window.preferences.path.parent / "update-error.txt"
+        if not error_file.is_file():
+            return False
+        try:
+            with error_file.open("r", encoding="utf-8-sig", errors="replace") as stream:
+                details = stream.read(8193)
+            error_file.unlink()
+        except OSError:
+            return False
+        if len(details) > 8192:
+            details = details[:8192] + "…"
+        details = details.strip() or "O instalador não informou o motivo."
+        dialog = QMessageBox(self.window)
+        dialog.setIcon(QMessageBox.Icon.Warning)
+        dialog.setWindowTitle("Atualização não concluída")
+        dialog.setTextFormat(Qt.TextFormat.PlainText)
+        dialog.setText(
+            "O Piixel foi reaberto porque a atualização não pôde ser concluída.\n\n"
+            f"{details}"
+        )
+        dialog.exec()
         return True
 
     def _set_busy(self, value: bool):

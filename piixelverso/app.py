@@ -74,6 +74,7 @@ class MainWindow(QMainWindow):
         self.show_home()
         if self.preferences.load_error:
             QTimer.singleShot(0, self._show_preferences_load_error)
+        QTimer.singleShot(0, self.updates.show_previous_install_error)
         QTimer.singleShot(2500, self.updates.check_automatically)
 
     def _get_module(self, module_id: str) -> ModulePage:
