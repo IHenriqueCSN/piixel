@@ -27,14 +27,14 @@ QLabel#homeSubtitle {{ color: {MUTED}; font-size: 15px; }}
 QLabel#homeSectionTitle {{ color: {INK}; font-size: 16px; font-weight: 700; }}
 QFrame#homeMascot {{ background: {PALE_BLUE}; border-radius: 28px; }}
 QFrame#moduleCard {{ background: {WHITE}; border: 1px solid {BORDER}; border-radius: 15px; }}
-QLabel#moduleIcon {{ background: {PALE_BLUE}; border-radius: 18px; }}
-QLabel#moduleTitle {{ color: {INK}; font-size: 24px; font-weight: 700; }}
+QLabel#moduleIcon {{ background: {PALE_BLUE}; border-radius: 13px; }}
+QLabel#moduleTitle {{ color: {INK}; font-size: 19px; font-weight: 700; }}
 QLabel#moduleDescription {{ color: {MUTED}; font-size: 13px; }}
 QLabel#moduleState {{ color: {MUTED}; font-size: 11px; }}
-QLabel#moduleDirty {{ color: {INK}; background: {HOVER}; border-radius: 5px; padding: 4px 7px; font-size: 10px; }}
-QPushButton#openModule {{ color: {INK}; background: {LIGHT_PINK}; border: 1px solid {PINK}; border-radius: 8px; padding: 11px 18px; font-size: 12px; font-weight: 700; }}
+QLabel#moduleDirty {{ color: {INK}; background: {HOVER}; border-radius: 5px; padding: 3px 6px; font-size: 10px; }}
+QPushButton#openModule {{ color: {INK}; background: {LIGHT_PINK}; border: 1px solid {PINK}; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 700; }}
 QPushButton#openModule:hover {{ background: {HOVER}; border-color: {PINK}; }}
-QPushButton#openModule:focus {{ border: 2px solid {INK}; padding: 10px 17px; }}
+QPushButton#openModule:focus {{ border: 2px solid {INK}; padding: 7px 13px; }}
 QLabel#homeFootnote {{ color: {MUTED}; font-size: 11px; }}
 """
 
@@ -51,6 +51,7 @@ class HomePage(QWidget):
         self.setStyleSheet(HOME_STYLE)
         self._definitions = {module.id: module for module in modules}
         self.module_buttons: dict[str, QPushButton] = {}
+        self.module_cards: dict[str, QFrame] = {}
         self._state_labels: dict[str, QLabel] = {}
         self._dirty_labels: dict[str, QLabel] = {}
 
@@ -64,7 +65,7 @@ class HomePage(QWidget):
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         body = QWidget(objectName="homeScrollBody")
         body_layout = QVBoxLayout(body)
-        body_layout.setContentsMargins(40, 36, 40, 30)
+        body_layout.setContentsMargins(40, 24, 40, 20)
         body_layout.setSpacing(0)
         centered = QHBoxLayout()
         centered.setContentsMargins(0, 0, 0, 0)
@@ -79,7 +80,7 @@ class HomePage(QWidget):
         left.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         contents = QVBoxLayout(left)
         contents.setContentsMargins(0, 0, 0, 0)
-        contents.setSpacing(24)
+        contents.setSpacing(14)
         contents.addWidget(self._hero())
         contents.addWidget(self._label("Módulos", "homeSectionTitle"))
         for module in modules:
@@ -145,12 +146,12 @@ class HomePage(QWidget):
         words.addStretch()
         row.addLayout(words, 1)
         mascot = QFrame(objectName="homeMascot")
-        mascot.setFixedSize(140, 140)
+        mascot.setFixedSize(108, 108)
         mascot_layout = QVBoxLayout(mascot)
-        mascot_layout.setContentsMargins(14, 22, 14, 22)
+        mascot_layout.setContentsMargins(12, 16, 12, 16)
         artwork = QLabel()
         artwork.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        artwork.setPixmap(svg_pixmap("symbol.svg", 112, 96))
+        artwork.setPixmap(svg_pixmap("symbol.svg", 86, 76))
         artwork.setAccessibleName("Mascote do Piixelverso")
         mascot_layout.addWidget(artwork)
         row.addWidget(mascot)
@@ -158,20 +159,32 @@ class HomePage(QWidget):
 
     def _module_card(self, module: ModuleDefinition, module_icon: QIcon) -> QWidget:
         card = QFrame(objectName="moduleCard")
-        compact = module.id in ("settings", "piixelfone")
-        card.setMinimumHeight(180 if compact else 250)
+        card.setMinimumHeight(96)
+        card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         content = QVBoxLayout(card)
-        content.setContentsMargins(25, 20 if compact else 24, 25, 20 if compact else 24)
-        content.setSpacing(12)
+        content.setContentsMargins(16, 12, 16, 12)
+        content.setSpacing(7)
         row = QHBoxLayout()
-        row.setSpacing(16)
+        row.setSpacing(12)
         illustration = QLabel()
         illustration.setObjectName("moduleIcon")
-        illustration.setFixedSize(44 if compact else 60, 44 if compact else 60)
+        illustration.setFixedSize(42, 42)
         illustration.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        illustration.setPixmap(module_icon.pixmap(36, 36))
+        illustration.setPixmap(module_icon.pixmap(30, 30))
         row.addWidget(illustration)
         row.addWidget(self._label(module.title, "moduleTitle"), 1)
+        dirty = self._label("Alterações não salvas", "moduleDirty")
+        dirty.hide()
+        row.addWidget(dirty)
+
+        launch = QPushButton(f"Abrir {module.title}")
+        launch.setObjectName("openModule")
+        launch.setAccessibleName(f"Abrir módulo {module.title}")
+        launch.setMinimumWidth(158)
+        launch.setAutoDefault(True)
+        launch.setDefault(not self.module_buttons)
+        launch.clicked.connect(lambda _checked=False, identifier=module.id: self.module_requested.emit(identifier))
+        row.addWidget(launch)
         content.addLayout(row)
         description = self._label(module.description, "moduleDescription")
         description.setWordWrap(True)
@@ -180,19 +193,7 @@ class HomePage(QWidget):
         state.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         state.hide()
         content.addWidget(state)
-        dirty = self._label("Alterações não salvas", "moduleDirty")
-        dirty.hide()
-        content.addWidget(dirty, 0, Qt.AlignmentFlag.AlignLeft)
-        content.addStretch(1)
-
-        launch = QPushButton(f"Abrir {module.title}")
-        launch.setObjectName("openModule")
-        launch.setAccessibleName(f"Abrir módulo {module.title}")
-        launch.setMinimumWidth(180)
-        launch.setAutoDefault(True)
-        launch.setDefault(not self.module_buttons)
-        launch.clicked.connect(lambda _checked=False, identifier=module.id: self.module_requested.emit(identifier))
-        content.addWidget(launch, 0, Qt.AlignmentFlag.AlignLeft)
+        self.module_cards[module.id] = card
         self.module_buttons[module.id] = launch
         self._state_labels[module.id] = state
         self._dirty_labels[module.id] = dirty

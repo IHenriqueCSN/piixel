@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QScrollArea
 
 from piixelverso.app import MainWindow, STYLE
 from piixelverso.format import encode_design, load_design, save_design
@@ -79,6 +79,33 @@ class HomeNavigationTests(unittest.TestCase):
         self.assertEqual({definition.id for definition in MODULES}, {"atelier", "piixelfone", "settings"})
         self.assertIn("Piixel", self.window.windowTitle())
         self.assertIn("Início", self.window.windowTitle())
+
+    def test_module_cards_fit_the_minimum_window_in_two_compact_rows(self):
+        self.window.resize(1120, 750)
+        self.app.processEvents()
+        home = self.window.home_page
+        scroll = home.findChild(QScrollArea)
+        self.assertIsNotNone(scroll)
+        self.assertEqual(scroll.verticalScrollBar().maximum(), 0)
+
+        for module_id, card in home.module_cards.items():
+            with self.subTest(module=module_id):
+                button = home.module_buttons[module_id]
+                icon = card.findChild(type(home._state_labels[module_id]), "moduleIcon")
+                description = card.findChild(type(home._state_labels[module_id]), "moduleDescription")
+                self.assertLessEqual(card.height(), 130)
+                self.assertLess(icon.geometry().top(), button.geometry().bottom())
+                self.assertLess(button.geometry().top(), icon.geometry().bottom())
+                self.assertGreaterEqual(description.geometry().top(), icon.geometry().bottom())
+
+        home.set_module_state("atelier", "Design aberto", dirty=True)
+        self.app.processEvents()
+        atelier_card = home.module_cards["atelier"]
+        dirty = home._dirty_labels["atelier"]
+        self.assertEqual(scroll.verticalScrollBar().maximum(), 0)
+        self.assertLessEqual(atelier_card.height(), 150)
+        self.assertLess(dirty.geometry().top(), home.module_buttons["atelier"].geometry().bottom())
+        self.assertLess(home.module_buttons["atelier"].geometry().top(), dirty.geometry().bottom())
 
     def test_launcher_home_button_and_home_shortcut_reuse_one_module(self):
         launch = self.window.home_page.module_buttons["atelier"]

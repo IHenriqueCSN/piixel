@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "piixelverso"
-version = "0.3.0"
+version = "0.3.1"
 description = "Piixel: aplicativo modular do Piixelverso com Ateliê de pixel art"
 readme = "README.md"
 requires-python = ">=3.11"
