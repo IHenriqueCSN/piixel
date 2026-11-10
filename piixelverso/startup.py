@@ -102,7 +102,7 @@ def launch_update_after_exit(installer: str | Path) -> bool:
                  "-WindowStyle", "Hidden", "-File", str(helper)],
                 stdin=subprocess.DEVNULL, stdout=diagnostic, stderr=subprocess.STDOUT,
                 close_fds=True,
-                creationflags=(subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS |
+                creationflags=(subprocess.CREATE_NO_WINDOW |
                                subprocess.CREATE_NEW_PROCESS_GROUP),
             )
     except OSError:
@@ -120,7 +120,13 @@ def launch_update_after_exit(installer: str | Path) -> bool:
             except OSError:
                 pass
             return True
-        if process.poll() is not None:
+        exit_code = process.poll()
+        if exit_code is not None:
+            try:
+                with helper_log.open("a", encoding="utf-8") as diagnostic:
+                    diagnostic.write(f"PowerShell encerrou antes da confirmação: {exit_code}\n")
+            except OSError:
+                pass
             break
         time.sleep(0.025)
     try:

@@ -303,7 +303,7 @@ class WindowsUpdateLaunchTests(unittest.TestCase):
             self.assertIn("Set-Content -LiteralPath $errorFile", script)
             self.assertIn("Restart-Piixel", script)
             self.assertFalse(ready.exists())
-            self.assertEqual(popen.call_args.kwargs["creationflags"], 7)
+            self.assertEqual(popen.call_args.kwargs["creationflags"], 5)
 
     def test_launcher_refuses_to_close_when_powershell_exits_without_handshake(self):
         from piixelverso import startup
