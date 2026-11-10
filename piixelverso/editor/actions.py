@@ -9,7 +9,7 @@ from PySide6.QtGui import QAction, QActionGroup, QIcon, QKeySequence
 from PySide6.QtWidgets import QWidget
 
 
-TOOL_KEYS = ("pencil", "bucket", "eraser", "picker", "line", "rectangle", "ellipse")
+TOOL_KEYS = ("pencil", "bucket", "eraser", "picker", "selection", "line", "rectangle", "ellipse")
 
 
 @dataclass(frozen=True)
@@ -30,10 +30,14 @@ COMMANDS = (
     CommandDefinition("resize_canvas", "Redimensionar prancheta…", "fit", "Ctrl+Alt+C"),
     CommandDefinition("undo", "Desfazer", "undo", _STANDARD.Undo),
     CommandDefinition("redo", "Refazer", "redo", _STANDARD.Redo),
+    CommandDefinition("cut", "Recortar", "cut", _STANDARD.Cut),
+    CommandDefinition("copy", "Copiar", "copy", _STANDARD.Copy),
+    CommandDefinition("paste", "Colar", "paste", _STANDARD.Paste),
     CommandDefinition("pencil", "Lápis", "pencil", "B"),
     CommandDefinition("bucket", "Balde de tinta", "bucket", "G"),
     CommandDefinition("eraser", "Borracha", "eraser", "E"),
     CommandDefinition("picker", "Conta-gotas", "picker", "I"),
+    CommandDefinition("selection", "Seleção", "selection", "S"),
     CommandDefinition("line", "Linha reta", "line", "L"),
     CommandDefinition("rectangle", "Retângulo", "rectangle", "R"),
     CommandDefinition("ellipse", "Elipse", "ellipse", "O"),
@@ -67,7 +71,10 @@ class EditorActions:
             key = definition.key
             action = QAction(icon_factory(definition.symbol), definition.text, parent)
             action.setObjectName(f"action_{key}")
-            action.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
+            action.setShortcutContext(
+                Qt.ShortcutContext.WidgetShortcut
+                if key in ("cut", "copy", "paste") else Qt.ShortcutContext.WindowShortcut
+            )
             sequences = []
             if isinstance(definition.shortcut, QKeySequence.StandardKey):
                 sequences = QKeySequence.keyBindings(definition.shortcut)

@@ -213,7 +213,7 @@ class UpdateControllerTests(unittest.TestCase):
         self.assertTrue(controller.check_automatically())
         self.assertTrue(controller.busy)
         self.wait_until(lambda: not controller.busy)
-        self.assertEqual(client.version, "0.3.2")
+        self.assertEqual(client.version, "0.4.0")
         self.assertIn("versão mais recente", statuses[-1])
         controller.shutdown()
 

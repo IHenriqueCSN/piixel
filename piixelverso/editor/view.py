@@ -78,7 +78,10 @@ class AtelierView(QWidget):
 
         self.command_bar = EditorCommandBar(self.command_actions)
         layout.addWidget(self.command_bar)
-        self.tool_buttons = {key: self.command_bar.buttons[key] for key in ("pencil", "bucket", "eraser", "picker")}
+        self.tool_buttons = {
+            key: self.command_bar.buttons[key]
+            for key in ("pencil", "bucket", "eraser", "picker", "selection")
+        }
         self.undo_button = self.command_bar.buttons["undo"]
         self.redo_button = self.command_bar.buttons["redo"]
         self.display_mode_combo = self.command_bar.display_mode_combo
@@ -170,7 +173,7 @@ class AtelierView(QWidget):
         active_layout.addLayout(text)
         contents.addWidget(active)
         contents.addStretch()
-        tip = label("DICA DO ATELIÊ\n\nArraste para desenhar. Use o botão direito para apagar.", "hint")
+        tip = label("DICA DO ATELIÊ\n\nArraste para desenhar. Pressione S para selecionar uma área.", "hint")
         tip.setWordWrap(True)
         contents.addWidget(tip)
         scroll.setWidget(body)

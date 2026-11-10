@@ -4,7 +4,7 @@ from __future__ import annotations
 from html import escape
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QRect, QTimer
 from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QMenu, QMessageBox, QVBoxLayout
 
 from .brand import app_icon, ensure_fonts
@@ -30,6 +30,9 @@ from .preferences import PreferencesError, PreferencesStore
 from .replace import ReplaceColorDialog
 from .resize import count_cropped_pixels, resized_design
 from .resize_dialog import ResizeCanvasDialog
+from .selection import (
+    SelectionPayload, capture_selection, cut_selection_changes, paste_selection_changes,
+)
 from .theme import APP_STYLE, BORDER, INK, PINK, apply_palette
 from .ui.icons import icon
 from .ui.widgets import button, label
@@ -77,6 +80,7 @@ class AtelierModule(ModulePage):
         self._swatches = {}
         self._custom_colors: list[str] = []
         self._recent_colors: list[str] = []
+        self._selection_clipboard: SelectionPayload | None = None
         self._counts_timer = QTimer(self)
         self._counts_timer.setSingleShot(True)
         self._counts_timer.timeout.connect(self.refresh_counts)
@@ -126,6 +130,9 @@ class AtelierModule(ModulePage):
         self.canvas.changed.connect(self._canvas_changed)
         self.canvas.stroke_finished.connect(self._commit_stroke)
         self.canvas.color_picked.connect(self.pick_color)
+        self.canvas.selection_changed.connect(self._sync_selection_actions)
+        for key in ("cut", "copy", "paste"):
+            self.canvas.addAction(self.command_actions[key])
 
     def _create_actions(self):
         self._actions = EditorActions(
@@ -139,6 +146,9 @@ class AtelierModule(ModulePage):
                 "resize_canvas": self.show_resize_canvas_dialog,
                 "undo": self.undo,
                 "redo": self.redo,
+                "cut": self.cut_selection,
+                "copy": self.copy_selection,
+                "paste": self.paste_selection,
                 "replace_color": self.show_replace_color_dialog,
                 "custom_color": self.custom_color,
                 "fit": self.fit_canvas,
@@ -195,6 +205,55 @@ class AtelierModule(ModulePage):
         self.command_actions["shape_fill"].setEnabled(
             self._active and self.canvas.tool in ("rectangle", "ellipse")
         )
+
+    def _sync_selection_actions(self, *_args):
+        selected = self.canvas.has_selection
+        self.command_actions["copy"].setEnabled(self._active and selected)
+        self.command_actions["cut"].setEnabled(self._active and selected)
+        self.command_actions["paste"].setEnabled(
+            self._active and self._selection_clipboard is not None
+        )
+
+    def copy_selection(self) -> bool:
+        self.canvas.finish_stroke()
+        rect = self.canvas.selection_tuple()
+        if not self._active or rect is None:
+            return False
+        self._selection_clipboard = capture_selection(self.design, rect)
+        self._sync_selection_actions()
+        return True
+
+    def cut_selection(self) -> bool:
+        self.canvas.finish_stroke()
+        rect = self.canvas.selection_tuple()
+        if not self._active or rect is None:
+            return False
+        self._selection_clipboard = capture_selection(self.design, rect)
+        after = cut_selection_changes(self.design, rect)
+        if after:
+            before = {index: self.design.pixels[index] for index in after}
+            self.session.commit_pixels(before, after, "Recortar seleção")
+        self._sync_selection_actions()
+        return True
+
+    def paste_selection(self) -> bool:
+        self.canvas.finish_stroke()
+        payload = self._selection_clipboard
+        if not self._active or payload is None:
+            return False
+        current = self.canvas.selection
+        preferred_left = current.x() + 1 if current is not None else 0
+        preferred_top = current.y() + 1 if current is not None else 0
+        left = max(0, min(max(0, self.design.width - payload.width), preferred_left))
+        top = max(0, min(max(0, self.design.height - payload.height), preferred_top))
+        after = paste_selection_changes(self.design, payload, left, top)
+        if after:
+            before = {index: self.design.pixels[index] for index in after}
+            self.session.commit_pixels(before, after, "Colar seleção")
+        visible_width = min(payload.width, self.design.width - left)
+        visible_height = min(payload.height, self.design.height - top)
+        self.canvas.set_selection(QRect(left, top, visible_width, visible_height))
+        return True
 
     @property
     def recent_colors(self) -> tuple[str, ...]:
@@ -396,7 +455,8 @@ class AtelierModule(ModulePage):
     def _commit_stroke(self, before, after):
         shapes = {"line": "Desenhar linha reta", "rectangle": "Desenhar retângulo", "ellipse": "Desenhar elipse"}
         text = "Apagar pixels" if self.canvas.is_erasing else (
-            shapes.get(self.canvas.tool, "Preencher área" if self.canvas.tool == "bucket" else "Pintar pixels"))
+            shapes.get(self.canvas.tool, "Mover seleção" if self.canvas.tool == "selection" else (
+                "Preencher área" if self.canvas.tool == "bucket" else "Pintar pixels")))
         self.session.commit_pixels(before, after, text)
 
     def prepare_navigation(self):
@@ -417,6 +477,7 @@ class AtelierModule(ModulePage):
         self.command_actions["redo"].setEnabled(self._active and self.history.canRedo())
         self.command_actions["replace_color"].setEnabled(self._active and self.design.filled_count > 0)
         self._sync_shape_actions()
+        self._sync_selection_actions()
         self._update_title()
 
     def undo(self):

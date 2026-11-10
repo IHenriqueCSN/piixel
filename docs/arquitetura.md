@@ -29,7 +29,7 @@ flowchart TD
 ## Documento e regras de desenho
 
 - `model.py` representa a grade, as cores e o nome do design.
-- `operations.py`, `shapes.py` e `resize.py` calculam alterações sem depender de widgets Qt.
+- `operations.py`, `shapes.py`, `selection.py` e `resize.py` calculam alterações sem depender de widgets Qt.
 - `editor/session.py` mantém o documento aberto, seu caminho e o `QUndoStack`. Um salvamento só atualiza o caminho e a marca de documento salvo depois que a gravação termina com sucesso.
 - `editor/history.py` aplica pixels, nomes e dimensões à sessão. Os comandos não conhecem janelas, campos de texto ou a construção da interface.
 
@@ -47,7 +47,7 @@ A identidade do documento é preservada durante redimensionamentos. Isso permite
 
 Os construtores de comandos anteriormente importados de `atelier.py` continuam disponíveis como adaptadores para a sessão. O código novo usa os comandos de `editor/history.py` diretamente; esses comandos não dependem do coordenador ou dos widgets.
 
-O canvas mantém o estado transitório dos gestos. A pintura livre continua atualizando os pixels durante o arraste; as formas geométricas continuam usando uma prévia separada até a confirmação. Ao concluir um gesto, o canvas informa os valores anteriores e posteriores, e a sessão registra o comando reversível. As notificações da sessão atualizam a apresentação.
+O canvas mantém o estado transitório dos gestos. A pintura livre continua atualizando os pixels durante o arraste; as formas geométricas continuam usando uma prévia separada até a confirmação. A seleção retangular guarda apenas suas coordenadas no canvas; `selection.py` captura o conteúdo e calcula recorte, colagem e movimento, inclusive com sobreposição. Ao concluir um gesto que altera pixels, o canvas informa os valores anteriores e posteriores, e a sessão registra o comando reversível. As notificações da sessão atualizam a apresentação.
 
 ## Módulos
 

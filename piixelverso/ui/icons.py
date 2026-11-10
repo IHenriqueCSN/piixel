@@ -46,6 +46,18 @@ def icon(kind: str, color=INK) -> QIcon:
         p.drawLine(7, 14, 16, 5); p.drawLine(11, 18, 20, 9)
         p.drawLine(16, 5, 20, 9); p.drawLine(7, 14, 6, 20)
         p.drawLine(6, 20, 11, 18); p.drawLine(13, 5, 20, 12)
+    elif kind == "selection":
+        p.setPen(QPen(QColor(color), 1.7, Qt.PenStyle.DashLine))
+        p.drawRect(4, 4, 16, 16)
+    elif kind == "copy":
+        p.drawRoundedRect(7, 7, 13, 13, 2, 2)
+        p.drawRoundedRect(4, 4, 13, 13, 2, 2)
+    elif kind == "cut":
+        p.drawEllipse(4, 15, 5, 5); p.drawEllipse(15, 15, 5, 5)
+        p.drawLine(8, 16, 17, 5); p.drawLine(16, 16, 7, 5)
+    elif kind == "paste":
+        p.drawRoundedRect(5, 6, 14, 15, 2, 2)
+        p.drawRect(8, 3, 8, 5)
     elif kind in ("undo", "redo"):
         if kind == "redo":
             p.translate(24, 0); p.scale(-1, 1)

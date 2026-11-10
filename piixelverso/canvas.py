@@ -9,6 +9,7 @@ from .materials import TRANSPARENT_OUTLINE, display_color
 from .model import PixelDesign
 from .model import is_transparent
 from .operations import flood_fill_changes
+from .selection import move_selection_changes
 from .shapes import SHAPE_TOOLS, shape_cells
 from .theme import BORDER, EMPTY_ALT, GRID, MUTED, PINK, WHITE
 
@@ -18,6 +19,7 @@ class PixelCanvas(QWidget):
     stroke_finished = Signal(object, object)
     color_picked = Signal(str)
     hovered = Signal(int, int)
+    selection_changed = Signal(bool)
     MARGIN = 26
 
     def __init__(self, design: PixelDesign, parent=None):
@@ -41,6 +43,11 @@ class PixelCanvas(QWidget):
         self._shape_tool: str | None = None
         self._shape_color = self.color
         self._shape_fill = False
+        self.selection: QRect | None = None
+        self._selection_mode: str | None = None
+        self._selection_anchor: tuple[int, int] | None = None
+        self._selection_previous: QRect | None = None
+        self._selection_original: QRect | None = None
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(Qt.CursorShape.CrossCursor)
@@ -67,7 +74,28 @@ class PixelCanvas(QWidget):
         self.finish_stroke()
         self.design = design
         self._hover = None
+        self.set_selection(None)
         self._resize()
+
+    @property
+    def has_selection(self) -> bool:
+        return self.selection is not None and not self.selection.isEmpty()
+
+    def set_selection(self, selection: QRect | None):
+        normalized = QRect(selection).normalized() if selection is not None else None
+        if normalized is not None and normalized.isEmpty():
+            normalized = None
+        if self.selection == normalized:
+            return
+        self.selection = normalized
+        self.selection_changed.emit(self.has_selection)
+        self.update()
+
+    def selection_tuple(self) -> tuple[int, int, int, int] | None:
+        if not self.has_selection:
+            return None
+        return (self.selection.x(), self.selection.y(),
+                self.selection.width(), self.selection.height())
 
     def set_zoom(self, percent: int):
         self.cell_size = max(4, round(16 * percent / 100))
@@ -139,6 +167,18 @@ class PixelCanvas(QWidget):
         self._shape_end = None
         self._shape_tool = None
 
+    def _update_selection_preview(self, end: tuple[int, int]):
+        if self._selection_mode == "select":
+            anchor = self._selection_anchor
+            self.set_selection(QRect(QPoint(*anchor), QPoint(*end)).normalized())
+        elif self._selection_mode == "move":
+            original = self._selection_original
+            anchor_x, anchor_y = self._selection_anchor
+            dx, dy = end[0] - anchor_x, end[1] - anchor_y
+            left = max(0, min(self.design.width - original.width(), original.x() + dx))
+            top = max(0, min(self.design.height - original.height(), original.y() + dy))
+            self.set_selection(QRect(left, top, original.width(), original.height()))
+
     def paintEvent(self, event):
         painter = QPainter(self)
         m, size = self.MARGIN, self.cell_size
@@ -185,6 +225,22 @@ class PixelCanvas(QWidget):
             x, y = self._hover
             painter.setPen(QPen(QColor(PINK), 2))
             painter.drawRect(m + x * size + 1, m + y * size + 1, size - 2, size - 2)
+        if self.has_selection:
+            selection = self.selection
+            bounds = QRect(
+                m + selection.x() * size,
+                m + selection.y() * size,
+                selection.width() * size,
+                selection.height() * size,
+            )
+            tint = QColor(PINK)
+            tint.setAlpha(24)
+            painter.fillRect(bounds.adjusted(1, 1, -1, -1), tint)
+            pen = QPen(QColor(PINK), 2, Qt.PenStyle.DashLine)
+            pen.setCosmetic(True)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRect(bounds.adjusted(1, 1, -1, -1))
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() not in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
@@ -193,6 +249,23 @@ class PixelCanvas(QWidget):
         if cell is None:
             return
         self.finish_stroke()
+        if self.tool == "selection":
+            self.setFocus(Qt.FocusReason.MouseFocusReason)
+            if event.button() == Qt.MouseButton.RightButton:
+                self.set_selection(None)
+                return
+            self._drawing = True
+            self._stroke_button = event.button()
+            self._selection_anchor = cell
+            self._selection_previous = QRect(self.selection) if self.has_selection else None
+            if self.has_selection and self.selection.contains(*cell):
+                self._selection_mode = "move"
+                self._selection_original = QRect(self.selection)
+            else:
+                self._selection_mode = "select"
+                self._selection_original = None
+                self.set_selection(QRect(cell[0], cell[1], 1, 1))
+            return
         if self.tool in SHAPE_TOOLS and event.button() == Qt.MouseButton.LeftButton:
             self.setFocus(Qt.FocusReason.MouseFocusReason)
             self._drawing = True
@@ -262,7 +335,9 @@ class PixelCanvas(QWidget):
         if cell:
             self.hovered.emit(*cell)
         if self._drawing:
-            if self._shape_tool is not None:
+            if self._selection_mode is not None:
+                self._update_selection_preview(self._clamped_cell(event.position().toPoint()))
+            elif self._shape_tool is not None:
                 self._update_shape_preview(self._clamped_cell(event.position().toPoint()))
             else:
                 if cell:
@@ -273,7 +348,9 @@ class PixelCanvas(QWidget):
     def mouseReleaseEvent(self, event):
         if not self._drawing or event.button() != self._stroke_button:
             return
-        if self._shape_tool is not None:
+        if self._selection_mode is not None:
+            self._update_selection_preview(self._clamped_cell(event.position().toPoint()))
+        elif self._shape_tool is not None:
             self._update_shape_preview(self._clamped_cell(event.position().toPoint()))
         self.finish_stroke()
 
@@ -282,6 +359,25 @@ class PixelCanvas(QWidget):
             return
         self._drawing = False
         self._stroke_button = None
+        if self._selection_mode is not None:
+            mode = self._selection_mode
+            original = self._selection_original
+            target = QRect(self.selection) if self.has_selection else None
+            self._selection_mode = None
+            self._selection_anchor = None
+            self._selection_previous = None
+            self._selection_original = None
+            if mode == "move" and original is not None and target is not None:
+                source = (original.x(), original.y(), original.width(), original.height())
+                after = move_selection_changes(self.design, source, target.x(), target.y())
+                before = {index: self.design.pixels[index] for index in after}
+                for index, color in after.items():
+                    self.design.pixels[index] = color
+                if after:
+                    self.changed.emit()
+                    self.stroke_finished.emit(before, after)
+            self.update()
+            return
         if self._shape_tool is not None:
             after = {index: color for index, color in self._shape_preview.items()
                      if self.design.pixels[index] != color}
@@ -306,7 +402,20 @@ class PixelCanvas(QWidget):
 
     def cancel_stroke(self) -> bool:
         """Discard an uncommitted geometric preview without changing the design."""
+        if self._selection_mode is not None:
+            previous = QRect(self._selection_previous) if self._selection_previous is not None else None
+            self._drawing = False
+            self._stroke_button = None
+            self._selection_mode = None
+            self._selection_anchor = None
+            self._selection_previous = None
+            self._selection_original = None
+            self.set_selection(previous)
+            return True
         if self._shape_tool is None:
+            if self.has_selection:
+                self.set_selection(None)
+                return True
             return False
         self._drawing = False
         self._stroke_button = None

@@ -67,9 +67,12 @@ class EditorCommandBar(QWidget):
         for name in ("undo", "redo"):
             self.menus["edit"].addAction(commands[name])
         self.menus["edit"].addSeparator()
+        for name in ("cut", "copy", "paste"):
+            self.menus["edit"].addAction(commands[name])
+        self.menus["edit"].addSeparator()
         self.menus["edit"].addAction(commands["resize_canvas"])
         self.menus["edit"].addSeparator()
-        for name in ("pencil", "bucket", "eraser", "picker"):
+        for name in ("pencil", "bucket", "eraser", "picker", "selection"):
             self.menus["edit"].addAction(commands[name])
         self.shape_menu = self.menus["edit"].addMenu("Formas")
         for name in ("line", "rectangle", "ellipse"):
@@ -95,7 +98,7 @@ class EditorCommandBar(QWidget):
         for name in ("undo", "redo"):
             self._add_command(name)
         self.toolbar.addSeparator()
-        for name in ("pencil", "bucket", "eraser", "picker"):
+        for name in ("pencil", "bucket", "eraser", "picker", "selection"):
             self._add_command(name)
         self._build_shape_tools()
         for name in ("replace_color", "custom_color"):

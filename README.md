@@ -28,6 +28,7 @@ No Piixelfone, ações como abrir conversas, enviar mensagens ou arquivos e rege
 - Redimensionamento da prancheta entre 10 e 128 células por eixo, preservando as peças e o histórico.
 - Lápis, balde de tinta, borracha e conta-gotas para capturar cores já usadas.
 - Linha reta, retângulo e elipse, com prévia, cancelamento e preenchimento opcional das formas.
+- Seleção retangular com copiar, recortar, colar e mover, integrada ao histórico.
 - Substituição de uma cor em todo o desenho, com prévia da quantidade de peças afetadas.
 - Paleta inicial e cores personalizadas da sessão, com opção de salvar cores nomeadas para próximas sessões.
 - Bead transparente na paleta padrão, distinta de branco e de uma célula vazia.
@@ -158,6 +159,25 @@ Retângulos e elipses começam com apenas o contorno. Marque **Preencher** na ba
 
 Os atalhos são **L** para linha, **R** para retângulo e **O** para elipse. As formas funcionam em quadradinhos e rosquinhas e respeitam os limites da prancheta. O botão direito continua apagando livremente. Ao trocar de ferramenta, salvar ou voltar ao início durante um arraste, a forma atual é concluída.
 
+## Selecionar, copiar, recortar e colar
+
+Escolha **Seleção** na barra, em **Editar → Seleção**, ou pressione **S**. Arraste
+entre duas células para delimitar uma região. O contorno rosa mostra a área ativa;
+pressione **Esc** ou clique com o botão direito para removê-lo sem alterar o
+desenho.
+
+Use **Ctrl+C** para copiar, **Ctrl+X** para recortar e **Ctrl+V** para colar. A
+cópia preserva todas as células do retângulo, inclusive espaços vazios e beads
+transparentes. Cada colagem aparece uma célula abaixo e à direita da seleção
+anterior, enquanto houver espaço na prancheta, facilitando duplicar padrões. Para
+mover uma região sem usar a área de transferência, arraste a partir de dentro da
+seleção.
+
+Recortar, colar e mover são ações únicas no histórico e podem ser desfeitas ou
+refeitas. A seleção é limpa ao abrir, criar ou redimensionar um design. Os atalhos
+de cópia atuam na prancheta quando ela está com foco; dentro do campo de nome,
+continuam copiando, recortando e colando texto normalmente.
+
 ## Redimensionar a prancheta
 
 No Ateliê, use **Editar → Redimensionar prancheta…** ou **Ctrl+Alt+C**. Defina a largura e a altura de forma independente, de **10 a 128 células** por dimensão. Por exemplo, é possível usar uma prancheta de **64 × 32**, **10 × 10** ou **128 × 128**.
@@ -243,7 +263,7 @@ visualização.
 A barra compacta no topo reúne menus tradicionais e ícones das ferramentas mais usadas. Os menus abrem somente quando acionados, deixando mais espaço para a prancheta:
 
 - **Arquivo**: novo design, abrir, salvar, salvar como, exportar PNG, tela inicial e Configurações.
-- **Editar**: desfazer/refazer, redimensionar prancheta, lápis, balde de tinta, borracha, conta-gotas, formas geométricas, substituir cor e cor personalizada.
+- **Editar**: desfazer/refazer, copiar/recortar/colar, redimensionar prancheta, seleção, lápis, balde de tinta, borracha, conta-gotas, formas geométricas, substituir cor e cor personalizada.
 - **Exibir**: formato das peças, grade, zoom e ajustar à janela.
 
 Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto você desenha, sem precisar abrir os menus. No Windows e Linux:
@@ -259,6 +279,10 @@ Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto 
 | Abrir Configurações | Ctrl+, |
 | Desfazer | Ctrl+Z |
 | Refazer | Ctrl+Y ou Ctrl+Shift+Z |
+| Recortar seleção | Ctrl+X |
+| Copiar seleção | Ctrl+C |
+| Colar seleção | Ctrl+V |
+| Ferramenta Seleção | S |
 | Lápis | B |
 | Balde de tinta | G |
 | Borracha | E |
@@ -267,7 +291,7 @@ Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto 
 | Linha reta | L |
 | Retângulo | R |
 | Elipse | O |
-| Cancelar a prévia de uma forma | Esc |
+| Cancelar forma ou limpar seleção | Esc |
 | Substituir cor em todo o desenho | Ctrl+H |
 | Menu Arquivo | Alt+A |
 | Menu Editar | Alt+E |
