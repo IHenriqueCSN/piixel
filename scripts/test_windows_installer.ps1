@@ -80,7 +80,11 @@ with patch.object(startup.sys, "frozen", True, create=True), \
 print("Auxiliar confirmou o início; encerrando o processo de origem.")
 '@
     & $PythonExecutable -c $updateCode $application $updateInstaller
-    if ($LASTEXITCODE -ne 0) { throw "O lançamento da atualização falhou." }
+    if ($LASTEXITCODE -ne 0) {
+        $helperLog = Join-Path $updateRoot "piixel-update-helper.log"
+        if (Test-Path -LiteralPath $helperLog) { Get-Content -LiteralPath $helperLog | Write-Host }
+        throw "O lançamento da atualização falhou."
+    }
 
     $updateDeadline = [DateTime]::UtcNow.AddSeconds(90)
     while ((Test-Path -LiteralPath $updateInstaller) -and [DateTime]::UtcNow -lt $updateDeadline) {

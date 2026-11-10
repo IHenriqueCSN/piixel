@@ -193,7 +193,8 @@ class UpdateController(QObject):
                 self.window, "Não foi possível iniciar a atualização",
                 "O instalador foi verificado, mas o Windows não confirmou o início da atualização.\n\n"
                 "O Piixel continuará aberto. Você também pode executar o instalador manualmente em:\n"
-                f"{installer}",
+                f"{installer}\n\n"
+                f"Diagnóstico: {installer.parent / 'piixel-update-helper.log'}",
             )
             return False
         self.window.close()

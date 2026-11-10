@@ -87,6 +87,7 @@ def launch_update_after_exit(installer: str | Path) -> bool:
     ready = path.parent / "piixel-update-helper.ready"
     error_file = path.parent.parent / "update-error.txt"
     install_log = path.parent / "piixel-update-install.log"
+    helper_log = path.parent / "piixel-update-helper.log"
     script = _update_helper_script(
         installer=path, restart=restart, ready=ready, error_file=error_file,
         install_log=install_log, process_id=os.getpid(),
@@ -95,14 +96,15 @@ def launch_update_after_exit(installer: str | Path) -> bool:
         ready.unlink(missing_ok=True)
         error_file.unlink(missing_ok=True)
         helper.write_text(script, encoding="utf-8-sig")
-        process = subprocess.Popen(
-            [str(powershell), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-             "-WindowStyle", "Hidden", "-File", str(helper)],
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            close_fds=True,
-            creationflags=(subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS |
-                           subprocess.CREATE_NEW_PROCESS_GROUP),
-        )
+        with helper_log.open("ab", buffering=0) as diagnostic:
+            process = subprocess.Popen(
+                [str(powershell), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                 "-WindowStyle", "Hidden", "-File", str(helper)],
+                stdin=subprocess.DEVNULL, stdout=diagnostic, stderr=subprocess.STDOUT,
+                close_fds=True,
+                creationflags=(subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS |
+                               subprocess.CREATE_NEW_PROCESS_GROUP),
+            )
     except OSError:
         return False
 
