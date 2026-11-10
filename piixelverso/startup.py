@@ -110,7 +110,9 @@ def launch_update_after_exit(installer: str | Path) -> bool:
 
     # Do not close Piixel until PowerShell proves that it parsed and started the
     # helper. Popen alone only proves that Windows accepted the process request.
-    deadline = time.monotonic() + 2.0
+    # Windows PowerShell 5.1 can take several seconds to start cold, especially
+    # while Defender scans a newly downloaded installer and helper script.
+    deadline = time.monotonic() + 10.0
     while time.monotonic() < deadline:
         if ready.is_file():
             try:
