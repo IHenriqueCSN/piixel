@@ -134,7 +134,9 @@ Na tela inicial, entre no **Ateliê**. Em seguida:
 
 O branco é uma cor e conta como peça quando aplicado. Um quadradinho vazio não
 tem peça e fica fora da contagem; ele é diferente da bead **Transparente**, que
-representa material físico e entra no estoque.
+representa material físico e entra no estoque. Na prancheta, branco e outros
+materiais muito claros recebem um contorno cinza discreto para continuarem
+visíveis sobre a grade. Esse contorno não altera a cor salva nem a exportação.
 
 Selecione **Balde de tinta** na barra ou pressione **G** e clique em uma célula para preencher a área da mesma cor ligada pelas laterais. Células que se tocam somente pela diagonal ficam separadas. O balde também preenche áreas vazias e funciona nas duas exibições de peças. Cada clique forma uma única ação de desfazer.
 

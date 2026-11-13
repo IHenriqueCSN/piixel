@@ -15,7 +15,9 @@ from PySide6.QtWidgets import QApplication
 
 from piixelverso.atelier import AtelierModule as MainWindow, STYLE
 from piixelverso.format import encode_design, save_design
-from piixelverso.materials import TRANSPARENT_FILL, TRANSPARENT_OUTLINE
+from piixelverso.materials import (
+    LIGHT_MATERIAL_OUTLINE, TRANSPARENT_FILL, TRANSPARENT_OUTLINE, needs_light_outline,
+)
 from piixelverso.model import TRANSPARENT, PixelDesign
 from piixelverso.preferences import PreferencesStore
 
@@ -120,6 +122,26 @@ class BeadViewTests(unittest.TestCase):
         self.assertNotEqual(image.pixelColor(ring), empty)
         self.assertEqual(self.window.design.counts()["#FFFFFF"], 1)
         self.assertEqual(self.window.design.filled_count, 2)
+
+    def test_light_materials_have_a_modest_outline_in_both_views(self):
+        self.assertTrue(needs_light_outline("#FFFFFF"))
+        self.assertTrue(needs_light_outline("#FFF8EF"))
+        self.assertFalse(needs_light_outline("#FFD878"))
+        self.assertFalse(needs_light_outline(TRANSPARENT))
+
+        self.window.toggle_grid(False)
+        canvas = self.window.canvas
+        center = canvas.cell_center(2, 1)
+        edge = center - QPoint(canvas.cell_size // 2 - 1, 0)
+        squares = canvas.grab().toImage()
+        self.assertEqual(squares.pixelColor(edge), QColor(LIGHT_MATERIAL_OUTLINE))
+        self.assertEqual(squares.pixelColor(center), QColor("#FFFFFF"))
+
+        self.set_mode("beads")
+        beads = canvas.grab().toImage()
+        outer_edge = center - QPoint(canvas.cell_size // 2 - 2, 0)
+        empty = beads.pixelColor(canvas.cell_center(0, 1))
+        self.assertNotEqual(beads.pixelColor(outer_edge), empty)
 
     def test_transparent_material_is_visible_selectable_counted_and_erasable(self):
         self.assertIn(TRANSPARENT, self.window._swatches)

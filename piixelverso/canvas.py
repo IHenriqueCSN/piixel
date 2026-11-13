@@ -5,7 +5,9 @@ from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPainterPath, QPen, QRadialGradient
 from PySide6.QtWidgets import QWidget
 
-from .materials import TRANSPARENT_OUTLINE, display_color
+from .materials import (
+    LIGHT_MATERIAL_OUTLINE, TRANSPARENT_OUTLINE, display_color, needs_light_outline,
+)
 from .model import PixelDesign
 from .model import is_transparent
 from .operations import flood_fill_changes
@@ -129,12 +131,17 @@ class PixelCanvas(QWidget):
         gradient.setColorAt(0, base.lighter(108))
         gradient.setColorAt(0.55, base)
         gradient.setColorAt(1, base.darker(108))
-        outline = QColor(TRANSPARENT_OUTLINE) if is_transparent(color) else (
-            QColor(BORDER) if base.lightness() > 235 else base.darker(115)
+        transparent = is_transparent(color)
+        light_material = needs_light_outline(color)
+        outline = QColor(TRANSPARENT_OUTLINE) if transparent else (
+            QColor(LIGHT_MATERIAL_OUTLINE) if light_material else base.darker(115)
         )
         painter.fillPath(ring, gradient)
-        painter.strokePath(outer_outline, QPen(outline, max(0.4, min(0.8, size * 0.03))))
-        if is_transparent(color):
+        outline_path = ring if transparent or light_material else outer_outline
+        painter.strokePath(
+            outline_path, QPen(outline, max(0.5, min(1.0, size * 0.04)))
+        )
+        if transparent:
             painter.strokePath(ring, QPen(outline, max(0.7, min(1.2, size * 0.05))))
 
     def cell_at(self, point: QPoint):
@@ -198,6 +205,13 @@ class PixelCanvas(QWidget):
                     self._paint_bead(painter, left, top, size, color)
                 elif is_transparent(color):
                     painter.setPen(QPen(QColor(TRANSPARENT_OUTLINE), max(1, min(2, size // 8))))
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+                    painter.drawRect(left + 1, top + 1, max(0, size - 3), max(0, size - 3))
+                    painter.setPen(Qt.PenStyle.NoPen)
+                elif color is not None and needs_light_outline(color):
+                    painter.setPen(QPen(
+                        QColor(LIGHT_MATERIAL_OUTLINE), max(1, min(2, size // 12))
+                    ))
                     painter.setBrush(Qt.BrushStyle.NoBrush)
                     painter.drawRect(left + 1, top + 1, max(0, size - 3), max(0, size - 3))
                     painter.setPen(Qt.PenStyle.NoPen)
