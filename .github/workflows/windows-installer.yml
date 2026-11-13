@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+    tags: ['v*']
     paths:
       - '.github/workflows/windows-installer.yml'
       - 'installer/**'
@@ -17,7 +18,7 @@ on:
       - 'run_piixelverso.py'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: windows-installer-${{ github.ref }}
@@ -68,3 +69,22 @@ jobs:
             dist/installer/*.sha256
           if-no-files-found: error
           retention-days: 90
+      - name: Publicar GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])"
+          $expectedTag = "v$version"
+          if ($env:GITHUB_REF_NAME -ne $expectedTag) {
+            throw "A tag $($env:GITHUB_REF_NAME) não corresponde à versão $version."
+          }
+          $assets = @(
+            Get-ChildItem dist/installer/Piixel-Setup-*-x64.exe,
+              dist/installer/Piixel-Setup-*-x64.exe.sha256 |
+              ForEach-Object { $_.FullName }
+          )
+          if ($assets.Count -ne 2) { throw 'Era esperado o instalador e seu checksum.' }
+          gh release create $env:GITHUB_REF_NAME @assets --verify-tag --latest `
+            --title "Piixel $version" --generate-notes
