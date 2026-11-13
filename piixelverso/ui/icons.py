@@ -3,10 +3,12 @@ from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 
 from ..brand import app_icon
-from ..theme import INK
+from ..theme import theme_color
 
 
-def icon(kind: str, color=INK) -> QIcon:
+def icon(kind: str, color=None) -> QIcon:
+    if color is None:
+        color = theme_color("ink")
     if kind == "brand":
         return app_icon()
     pixmap = QPixmap(24, 24)

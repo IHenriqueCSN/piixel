@@ -8,7 +8,10 @@ from PySide6.QtWidgets import (
     QSizePolicy, QSlider, QToolBar, QToolButton, QWidget,
 )
 
-from .theme import BORDER, HOVER, INK, LIGHT_PINK, MUTED, PINK, SELECTED, WHITE
+from .theme import (
+    BORDER, HOVER, INK, LIGHT_PINK, MUTED, PINK, SELECTED, WHITE,
+    apply_themed_stylesheet,
+)
 
 
 COMMAND_STYLE = f"""
@@ -42,7 +45,7 @@ class EditorCommandBar(QWidget):
         self.setObjectName("editorCommandBar")
         self.setAccessibleName("Menus e ferramentas")
         self.setFixedHeight(44)
-        self.setStyleSheet(COMMAND_STYLE)
+        apply_themed_stylesheet(self, COMMAND_STYLE)
         self.commands = commands
         self.buttons: dict[str, QToolButton] = {}
 

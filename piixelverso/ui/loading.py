@@ -7,7 +7,9 @@ from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget,
 )
 
-from ..theme import BLUE, BORDER, CREAM, INK, PINK
+from ..theme import (
+    BLUE, BORDER, CREAM, INK, PINK, apply_themed_stylesheet, theme_color,
+)
 
 
 class Spinner(QWidget):
@@ -45,10 +47,10 @@ class Spinner(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         ring = QRectF(self.rect()).adjusted(5, 5, -5, -5)
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.setPen(QPen(QColor(BLUE), 4, Qt.PenStyle.SolidLine,
+        painter.setPen(QPen(QColor(theme_color("blue")), 4, Qt.PenStyle.SolidLine,
                             Qt.PenCapStyle.RoundCap))
         painter.drawEllipse(ring)
-        painter.setPen(QPen(QColor(PINK), 4, Qt.PenStyle.SolidLine,
+        painter.setPen(QPen(QColor(theme_color("pink")), 4, Qt.PenStyle.SolidLine,
                             Qt.PenCapStyle.RoundCap))
         painter.drawArc(ring, -self._angle * 16, 100 * 16)
 
@@ -65,7 +67,7 @@ class _LoadingCard(QFrame):
         self.setObjectName("loadingCard")
         self.setFixedSize(360, 132)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.setStyleSheet(f"""
+        apply_themed_stylesheet(self, f"""
             QFrame#loadingCard {{
                 background: {CREAM}; border: 1px solid {BORDER}; border-radius: 12px;
             }}

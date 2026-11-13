@@ -20,7 +20,10 @@ from PySide6.QtWidgets import (
 from ..brand import svg_pixmap
 from ..module_api import ModulePage
 from ..preferences import PreferencesStore
-from ..theme import BORDER, CREAM, INK, LIGHT_PINK, MUTED, PALE_BLUE, WHITE
+from ..theme import (
+    BORDER, CREAM, INK, LIGHT_PINK, MUTED, PALE_BLUE, WHITE,
+    apply_themed_stylesheet, theme_color,
+)
 from ..ui.loading import LoadingOverlay
 
 
@@ -158,7 +161,7 @@ class PiixelfoneModule(ModulePage):
         self._loading_focus: QWidget | None = None
         self.setObjectName("piixelfoneModule")
         self.setWindowTitle("Piixel — Piixelfone")
-        self.setStyleSheet(STYLE)
+        apply_themed_stylesheet(self, STYLE)
         self._build()
         self._signals = _WorkerSignals(self)
         self._signals.completed.connect(self._completed)
@@ -616,7 +619,7 @@ class PiixelfoneModule(ModulePage):
                     content = f"Arquivo .pii: {record.get('filename', 'design.pii')}\nSelecione para salvar uma cópia."
                 item = QListWidgetItem(f"{who} · {date} · {status}\n{content}")
                 item.setData(Qt.ItemDataRole.UserRole, record["id"])
-                item.setBackground(QColor(CREAM if outgoing else PALE_BLUE))
+                item.setBackground(QColor(theme_color("cream" if outgoing else "pale_blue")))
                 self.messages_list.addItem(item)
                 if record["id"] == selected:
                     self.messages_list.setCurrentItem(item)
@@ -626,6 +629,10 @@ class PiixelfoneModule(ModulePage):
                 scrollbar.setValue(old_position)
             self._rendered_messages = rendered
         self._update_attachment_button()
+
+    def refresh_theme(self) -> None:
+        self._rendered_messages = None
+        self._render_conversation()
 
     def _update_controls(self) -> None:
         if not hasattr(self, "send_button"):

@@ -7,9 +7,9 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QFont, QKeySequence
-from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QStackedWidget
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QMessageBox, QStackedWidget
 
-from .brand import app_icon, ensure_fonts
+from .brand import app_icon, ensure_fonts, svg_pixmap
 from .home import HomePage
 from .modules import MODULES
 from .module_api import ModulePage
@@ -17,7 +17,7 @@ from .loading import PageLoadingController
 from .format import DesignFormatError, load_design
 from .model import PixelDesign
 from .preferences import PreferencesError, PreferencesStore
-from .theme import APP_STYLE, apply_palette
+from .theme import APP_STYLE, ensure_theme_controller
 from .thumbnails import thumbnail_png
 from .ui.icons import icon
 from .update_ui import UpdateController
@@ -31,12 +31,15 @@ class MainWindow(QMainWindow):
     def __init__(self, preferences: PreferencesStore | None = None):
         super().__init__()
         ensure_fonts()
-        apply_palette(QApplication.instance())
         self.setObjectName("piixelWindow")
         self.setWindowIcon(app_icon())
         self.setMinimumSize(1120, 750)
         self.resize(1380, 900)
         self.preferences = preferences if preferences is not None else PreferencesStore()
+        self.theme = ensure_theme_controller(
+            QApplication.instance(), self.preferences.appearance_mode()
+        )
+        self.theme.changed.connect(self._theme_changed)
         self.updates = UpdateController(self)
         self._update_close_approved = False
         self._refreshing_recent_files = False
@@ -76,6 +79,34 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(0, self._show_preferences_load_error)
         QTimer.singleShot(0, self.updates.show_previous_install_error)
         QTimer.singleShot(2500, self.updates.check_automatically)
+
+    def _theme_changed(self, _mode: str, _resolved: str) -> None:
+        """Recreate raster icons whose foreground follows the live theme."""
+        self.settings_action.setIcon(icon("settings"))
+        for definition in MODULES:
+            button = self.home_page.module_buttons.get(definition.id)
+            if button is not None:
+                module_icon = icon(definition.icon_name)
+                button.setIcon(module_icon)
+                self.home_page.module_icon_labels[definition.id].setPixmap(
+                    module_icon.pixmap(30, 30)
+                )
+        atelier = self.module_pages.get("atelier")
+        if atelier is not None and hasattr(atelier, "command_actions"):
+            from .editor.actions import COMMANDS
+            symbols = {definition.key: definition.symbol for definition in COMMANDS}
+            for key, action in atelier.command_actions.items():
+                if key in symbols:
+                    action.setIcon(icon(symbols[key]))
+            if hasattr(atelier, "refresh_theme"):
+                atelier.refresh_theme()
+        phone = self.module_pages.get("piixelfone")
+        if phone is not None and hasattr(phone, "refresh_theme"):
+            phone.refresh_theme()
+        for label in self.findChildren(QLabel):
+            if label.accessibleName() == "Piixelverso":
+                label.setPixmap(svg_pixmap("wordmark.svg", 142, 25))
+        self.update()
 
     def _get_module(self, module_id: str) -> ModulePage:
         if module_id not in self._definitions or module_id not in self._factories:

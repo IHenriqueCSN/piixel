@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QLocale, Qt
 from PySide6.QtWidgets import (
-    QDoubleSpinBox, QFormLayout, QFrame, QHBoxLayout, QLabel,
+    QComboBox, QDoubleSpinBox, QFormLayout, QFrame, QHBoxLayout, QLabel,
     QMessageBox, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
 )
 
@@ -12,7 +12,9 @@ from .module_api import ModulePage
 from .preferences import (
     MAX_PIECE_SIZE_MM, MIN_PIECE_SIZE_MM, PreferencesStore,
 )
-from .theme import BORDER, CREAM, INK, MUTED, WHITE
+from .theme import (
+    BORDER, CREAM, INK, MUTED, WHITE, apply_themed_stylesheet, theme_controller,
+)
 
 
 SETTINGS_STYLE = f"""
@@ -32,12 +34,14 @@ class SettingsModule(ModulePage):
         super().__init__(parent)
         self.preferences = preferences if preferences is not None else PreferencesStore()
         self.updater = None
+        self.theme = theme_controller()
         self._active = True
         self.setObjectName("settingsModule")
-        self.setStyleSheet(SETTINGS_STYLE)
+        apply_themed_stylesheet(self, SETTINGS_STYLE)
         self.setWindowTitle("Piixel — Configurações")
         self._build()
         self.piece_size_input.valueChanged.connect(self._update_status)
+        self.appearance_input.currentIndexChanged.connect(self._appearance_changed)
 
     @staticmethod
     def _label(text: str, name: str) -> QLabel:
@@ -97,6 +101,34 @@ class SettingsModule(ModulePage):
         contents.addWidget(self._label(
             "Ajuste as preferências usadas pelos módulos do Piixel.", "settingsSubtitle"
         ))
+
+        appearance_card = QFrame(objectName="settingsCard")
+        appearance_layout = QVBoxLayout(appearance_card)
+        appearance_layout.setContentsMargins(28, 26, 28, 26)
+        appearance_layout.setSpacing(16)
+        appearance_layout.addWidget(self._label("Aparência", "settingsCardTitle"))
+        appearance_layout.addWidget(self._label(
+            "Escolha o tema do Piixel. A opção Sistema acompanha a preferência de aparência "
+            "do Windows ou Linux.", "settingsNote"
+        ))
+        appearance_form = QFormLayout()
+        appearance_form.setSpacing(12)
+        self.appearance_input = QComboBox()
+        self.appearance_input.setObjectName("appearanceMode")
+        self.appearance_input.setAccessibleName("Aparência do Piixel")
+        self.appearance_input.addItem("Sistema", "system")
+        self.appearance_input.addItem("Claro", "light")
+        self.appearance_input.addItem("Escuro", "dark")
+        selected = self.appearance_input.findData(self.preferences.appearance_mode())
+        self.appearance_input.setCurrentIndex(max(0, selected))
+        self.appearance_input.setFixedWidth(180)
+        appearance_form.addRow("Tema", self.appearance_input)
+        appearance_layout.addLayout(appearance_form)
+        appearance_layout.addWidget(self._label(
+            "A prancheta mantém sempre as mesmas cores para que o desenho continue fiel. "
+            "A escolha é visualizada imediatamente e será guardada ao salvar.", "settingsNote"
+        ))
+        contents.addWidget(appearance_card)
 
         card = QFrame(objectName="settingsCard")
         card_layout = QVBoxLayout(card)
@@ -167,13 +199,23 @@ class SettingsModule(ModulePage):
         layout.addWidget(scroll, 1)
 
     def _update_status(self):
-        changed = self.piece_size_input.value() != self.preferences.piece_size_mm()
+        changed = (
+            self.piece_size_input.value() != self.preferences.piece_size_mm()
+            or self.appearance_input.currentData() != self.preferences.appearance_mode()
+        )
         self.status_label.setText("Alteração ainda não salva." if changed else "")
+
+    def _appearance_changed(self):
+        if self.theme is not None:
+            self.theme.set_mode(self.appearance_input.currentData())
+        self._update_status()
 
     def save_settings(self):
         self.piece_size_input.interpretText()
         try:
-            self.preferences.set_piece_size_mm(self.piece_size_input.value())
+            self.preferences.set_settings(
+                self.piece_size_input.value(), self.appearance_input.currentData()
+            )
         except (OSError, ValueError) as error:
             self.status_label.setText("Não foi possível salvar as configurações.")
             QMessageBox.warning(self.window(), "Não foi possível salvar as configurações", str(error))
@@ -188,6 +230,7 @@ class SettingsModule(ModulePage):
     def set_active(self, active: bool):
         self._active = bool(active)
         self.piece_size_input.setEnabled(self._active)
+        self.appearance_input.setEnabled(self._active)
         self.save_button.setEnabled(self._active)
         self._sync_update_button()
 
@@ -211,4 +254,4 @@ class SettingsModule(ModulePage):
         return False
 
     def focus_default(self):
-        self.piece_size_input.setFocus(Qt.FocusReason.OtherFocusReason)
+        self.appearance_input.setFocus(Qt.FocusReason.OtherFocusReason)

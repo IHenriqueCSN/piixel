@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 from .model import PixelDesign
 from .png_export import format_mm, measurement_labels, render_png
 from .preferences import validate_piece_size_mm
-from .theme import BORDER, MUTED, WHITE
+from .theme import BORDER, MUTED, WHITE, apply_themed_stylesheet
 
 
 class ExportPngDialog(QDialog):
@@ -39,7 +39,7 @@ class ExportPngDialog(QDialog):
 
         intro = QLabel("Escolha a aparência da imagem antes de salvar.")
         intro.setWordWrap(True)
-        intro.setStyleSheet(f"color: {MUTED};")
+        apply_themed_stylesheet(intro, f"color: {MUTED};")
         layout.addWidget(intro)
 
         options = QHBoxLayout()
@@ -67,7 +67,9 @@ class ExportPngDialog(QDialog):
             f"{format_mm(self._piece_size_mm)} por peça · altere em Configurações"
         )
         self.piece_size_label.setWordWrap(True)
-        self.piece_size_label.setStyleSheet(f"color: {MUTED}; font-size: 11px;")
+        apply_themed_stylesheet(
+            self.piece_size_label, f"color: {MUTED}; font-size: 11px;"
+        )
         layout.addWidget(self.piece_size_label)
 
         preview_heading = QLabel("Prévia do PNG")
@@ -76,7 +78,7 @@ class ExportPngDialog(QDialog):
 
         preview_frame = QFrame()
         preview_frame.setObjectName("exportPngPreviewFrame")
-        preview_frame.setStyleSheet(
+        apply_themed_stylesheet(preview_frame,
             f"QFrame#exportPngPreviewFrame {{ background: {WHITE}; "
             f"border: 1px solid {BORDER}; border-radius: 8px; }}"
         )
@@ -94,13 +96,15 @@ class ExportPngDialog(QDialog):
 
         note = QLabel("As medidas vão de uma extremidade à outra do desenho, sem contar as margens vazias.")
         note.setWordWrap(True)
-        note.setStyleSheet(f"color: {MUTED}; font-size: 11px;")
+        apply_themed_stylesheet(note, f"color: {MUTED}; font-size: 11px;")
         layout.addWidget(note)
 
         self.error_label = QLabel()
         self.error_label.setObjectName("exportPngError")
         self.error_label.setWordWrap(True)
-        self.error_label.setStyleSheet(f"color: {MUTED}; font-size: 11px;")
+        apply_themed_stylesheet(
+            self.error_label, f"color: {MUTED}; font-size: 11px;"
+        )
         self.error_label.hide()
         layout.addWidget(self.error_label)
         layout.addStretch(1)

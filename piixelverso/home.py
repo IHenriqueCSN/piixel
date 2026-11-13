@@ -13,7 +13,10 @@ from PySide6.QtWidgets import (
 from .brand import svg_pixmap
 from .modules import MODULES, ModuleDefinition
 from .recents import RecentFilesPanel
-from .theme import BORDER, CREAM, HOVER, INK, LIGHT_PINK, MUTED, PALE_BLUE, PINK, WHITE
+from .theme import (
+    BORDER, CREAM, HOVER, INK, LIGHT_PINK, MUTED, PALE_BLUE, PINK, WHITE,
+    apply_themed_stylesheet,
+)
 
 
 HOME_STYLE = f"""
@@ -48,9 +51,10 @@ class HomePage(QWidget):
         super().__init__(parent)
         self.setObjectName("homePage")
         self.setAccessibleName("Tela inicial do Piixel")
-        self.setStyleSheet(HOME_STYLE)
+        apply_themed_stylesheet(self, HOME_STYLE)
         self._definitions = {module.id: module for module in modules}
         self.module_buttons: dict[str, QPushButton] = {}
+        self.module_icon_labels: dict[str, QLabel] = {}
         self.module_cards: dict[str, QFrame] = {}
         self._state_labels: dict[str, QLabel] = {}
         self._dirty_labels: dict[str, QLabel] = {}
@@ -195,6 +199,7 @@ class HomePage(QWidget):
         content.addWidget(state)
         self.module_cards[module.id] = card
         self.module_buttons[module.id] = launch
+        self.module_icon_labels[module.id] = illustration
         self._state_labels[module.id] = state
         self._dirty_labels[module.id] = dirty
         return card

@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from .model import is_transparent, normalize_color
-from .theme import BORDER, MUTED
+from .theme import BORDER, MUTED, apply_themed_stylesheet
 
 
 class CustomColorDialog(QDialog):
@@ -44,7 +44,7 @@ class CustomColorDialog(QDialog):
 
         self.error_label = QLabel("Use uma cor no formato #RRGGBB.")
         self.error_label.setObjectName("customColorError")
-        self.error_label.setStyleSheet(f"color: {MUTED};")
+        apply_themed_stylesheet(self.error_label, f"color: {MUTED};")
         self.error_label.setWordWrap(True)
         layout.addWidget(self.error_label)
 
@@ -65,7 +65,7 @@ class CustomColorDialog(QDialog):
 
         note = QLabel("Sem marcar essa opção, a cor ficará disponível apenas nesta sessão.")
         note.setWordWrap(True)
-        note.setStyleSheet(f"color: {MUTED}; font-size: 11px;")
+        apply_themed_stylesheet(note, f"color: {MUTED}; font-size: 11px;")
         layout.addWidget(note)
 
         self.buttons = QDialogButtonBox()

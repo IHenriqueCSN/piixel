@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 
 from .materials import TRANSPARENT_OUTLINE, display_color, material_reference
 from .model import PixelDesign, is_transparent, normalize_color
-from .theme import BORDER, MUTED, PINK
+from .theme import BORDER, MUTED, PINK, apply_themed_stylesheet
 
 
 class ReplaceColorDialog(QDialog):
@@ -44,7 +44,7 @@ class ReplaceColorDialog(QDialog):
 
         note = QLabel("Troque uma cor em todas as ocorrências do desenho.")
         note.setWordWrap(True)
-        note.setStyleSheet(f"color: {MUTED};")
+        apply_themed_stylesheet(note, f"color: {MUTED};")
         layout.addWidget(note)
 
         layout.addWidget(QLabel("Cor original"))
@@ -110,7 +110,9 @@ class ReplaceColorDialog(QDialog):
         self.error_label = QLabel()
         self.error_label.setObjectName("replacementError")
         self.error_label.setWordWrap(True)
-        self.error_label.setStyleSheet(f"color: {MUTED}; font-size: 11px;")
+        apply_themed_stylesheet(
+            self.error_label, f"color: {MUTED}; font-size: 11px;"
+        )
         layout.addWidget(self.error_label)
         layout.addStretch(1)
 

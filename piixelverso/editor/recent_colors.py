@@ -10,7 +10,9 @@ from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QVBoxLayout, QWi
 
 from ..materials import TRANSPARENT_OUTLINE, display_color, material_reference
 from ..model import is_transparent, normalize_color
-from ..theme import BORDER, CREAM, INK, MUTED, PINK
+from ..theme import (
+    BORDER, CREAM, INK, MUTED, PINK, apply_themed_stylesheet, theme_color,
+)
 
 
 def _number_color(color: QColor) -> str:
@@ -41,7 +43,9 @@ class RecentColorsWidget(QWidget):
         heading = QLabel("Recentes · teclas 1–9")
         heading.setObjectName("recentColorsTitle")
         heading.setTextFormat(Qt.TextFormat.PlainText)
-        heading.setStyleSheet(f"color: {MUTED}; font-size: 10px; font-weight: 700;")
+        apply_themed_stylesheet(
+            heading, f"color: {MUTED}; font-size: 10px; font-weight: 700;"
+        )
         layout.addWidget(heading)
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
@@ -62,6 +66,8 @@ class RecentColorsWidget(QWidget):
         self.set_colors((), "")
 
     def set_colors(self, colors: Sequence[str], active_color: str) -> None:
+        self._last_colors = tuple(colors[:9])
+        self._last_active_color = active_color
         values = [normalize_color(value) for value in colors[:9]]
         if any(value is None for value in values):
             raise ValueError("Cor recente inválida.")
@@ -75,8 +81,9 @@ class RecentColorsWidget(QWidget):
                 button.setAccessibleName(f"Cor recente {number}, ainda vazia")
                 button.setToolTip("Selecione uma cor na paleta para adicioná-la às recentes.")
                 button.setStyleSheet(
-                    f"QPushButton {{ background: {CREAM}; color: {MUTED}; "
-                    f"border: 1px solid {BORDER}; border-radius: 5px; padding: 0; "
+                    f"QPushButton {{ background: {theme_color('cream')}; "
+                    f"color: {theme_color('muted')}; border: 1px solid {theme_color('border')}; "
+                    f"border-radius: 5px; padding: 0; "
                     "font-size: 11px; font-weight: 600; }"
                 )
                 continue
@@ -91,12 +98,20 @@ class RecentColorsWidget(QWidget):
             button.setToolTip(
                 f"<p>{escape(description)}<br>Selecionar com a tecla {number}</p>"
             )
-            inactive_border = TRANSPARENT_OUTLINE if is_transparent(value) else BORDER
-            border = f"2px solid {INK}" if value == active else f"1px solid {inactive_border}"
+            inactive_border = (
+                TRANSPARENT_OUTLINE if is_transparent(value) else theme_color("border")
+            )
+            border = (
+                f"2px solid {theme_color('ink')}"
+                if value == active else f"1px solid {inactive_border}"
+            )
             button.setStyleSheet(
                 f"QPushButton {{ background: {display_color(value)}; color: {_number_color(color)}; "
                 f"border: {border}; border-radius: 5px; padding: 0; "
                 "font-size: 11px; font-weight: 700; } "
-                f"QPushButton:hover {{ border: 2px solid {PINK}; }} "
-                f"QPushButton:focus {{ border: 2px solid {INK}; }}"
+                f"QPushButton:hover {{ border: 2px solid {theme_color('pink')}; }} "
+                f"QPushButton:focus {{ border: 2px solid {theme_color('ink')}; }}"
             )
+
+    def refresh_theme(self) -> None:
+        self.set_colors(self._last_colors, self._last_active_color)

@@ -18,7 +18,7 @@ from piixelverso.preferences import (
     DEFAULT_PIECE_SIZE_MM, PreferencesError, PreferencesStore, validate_piece_size_mm,
 )
 from piixelverso.settings import SettingsModule
-from piixelverso.theme import APP_STYLE
+from piixelverso.theme import APP_STYLE, ensure_theme_controller
 
 
 class PieceSizePreferencesTests(unittest.TestCase):
@@ -114,6 +114,7 @@ class SettingsModuleTests(unittest.TestCase):
         cls.app.setStyleSheet(APP_STYLE)
 
     def setUp(self):
+        self.theme = ensure_theme_controller(self.app, "light")
         self.directory = tempfile.TemporaryDirectory()
         self.path = Path(self.directory.name) / "preferences.json"
         self.preferences = PreferencesStore(self.path)
@@ -123,6 +124,7 @@ class SettingsModuleTests(unittest.TestCase):
         self.app.processEvents()
 
     def tearDown(self):
+        self.theme.set_mode("light")
         self.module.close()
         self.module.deleteLater()
         self.app.processEvents()
@@ -138,6 +140,21 @@ class SettingsModuleTests(unittest.TestCase):
         self.app.processEvents()
         self.assertEqual(self.preferences.piece_size_mm(), 2.6)
         self.assertEqual(PreferencesStore(self.path).piece_size_mm(), 2.6)
+        self.assertEqual(self.module.status_label.text(), "Configurações salvas.")
+
+    def test_appearance_previews_immediately_and_persists_only_on_save(self):
+        self.assertEqual(self.module.appearance_input.currentData(), "system")
+        index = self.module.appearance_input.findData("dark")
+        self.module.appearance_input.setCurrentIndex(index)
+        self.app.processEvents()
+        self.assertEqual(self.theme.resolved_mode, "dark")
+        self.assertEqual(self.preferences.appearance_mode(), "system")
+        self.assertFalse(self.path.exists())
+        self.assertEqual(self.module.status_label.text(), "Alteração ainda não salva.")
+
+        QTest.mouseClick(self.module.save_button, Qt.MouseButton.LeftButton)
+        self.app.processEvents()
+        self.assertEqual(PreferencesStore(self.path).appearance_mode(), "dark")
         self.assertEqual(self.module.status_label.text(), "Configurações salvas.")
 
     def test_navigation_keeps_draft_until_explicit_save_and_home_signal_works(self):
@@ -159,7 +176,7 @@ class SettingsModuleTests(unittest.TestCase):
         self.preferences.set_piece_size_mm(5)
         original = self.path.read_bytes()
         self.module.piece_size_input.setValue(2.6)
-        with patch.object(self.preferences, "set_piece_size_mm", side_effect=PreferencesError("Sem espaço")), \
+        with patch.object(self.preferences, "set_settings", side_effect=PreferencesError("Sem espaço")), \
              patch("piixelverso.settings.QMessageBox.warning") as warning:
             self.assertFalse(self.module.save_settings())
             warning.assert_called_once()

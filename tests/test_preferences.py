@@ -36,10 +36,22 @@ class PreferencesTests(unittest.TestCase):
         self.assertEqual(self.store.recent_files(), [])
         self.assertEqual(self.store.saved_colors(), [])
         self.assertFalse(self.path.exists())
+        self.assertEqual(self.store.appearance_mode(), "system")
         design = self.file("design.pii", time.time_ns())
         self.store.record_file(design, b"cached preview")
         reopened = PreferencesStore(self.path)
         self.assertEqual(reopened.saved_colors(), [])
+
+    def test_appearance_mode_persists_and_rejects_invalid_values(self):
+        self.store.set_appearance_mode("dark")
+        reopened = PreferencesStore(self.path)
+        self.assertEqual(reopened.appearance_mode(), "dark")
+        reopened.set_settings(2.5, "light")
+        final = PreferencesStore(self.path)
+        self.assertEqual(final.piece_size_mm(), 2.5)
+        self.assertEqual(final.appearance_mode(), "light")
+        with self.assertRaisesRegex(PreferencesError, "aparência"):
+            final.set_appearance_mode("noite")
 
     def test_explicitly_saved_named_colors_persist_normalize_and_remove(self):
         self.store.save_color("#ed5598", "  Rosa da marca ♥  ")

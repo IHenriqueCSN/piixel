@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import weakref
 
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QByteArray, QRectF, Qt
 from PySide6.QtGui import QFontDatabase, QGuiApplication, QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 
@@ -50,13 +50,19 @@ def ensure_fonts() -> None:
     _font_app = weakref.ref(app)
 
 
-def _render_svg(name: str, width: int, height: int, margin: float = 0) -> QPixmap:
+def _render_svg(name: str, width: int, height: int, margin: float = 0,
+                foreground: str | None = None) -> QPixmap:
     app = QGuiApplication.instance()
     if app is None:
         raise RuntimeError("Crie a aplicação Qt antes de carregar os símbolos do Piixelverso.")
     if width < 1 or height < 1:
         raise ValueError("A imagem da marca precisa ter dimensões positivas.")
-    renderer = QSvgRenderer(str(asset_path(name)))
+    path = asset_path(name)
+    if foreground is None:
+        renderer = QSvgRenderer(str(path))
+    else:
+        source_data = path.read_bytes().replace(b"#292343", foreground.encode("ascii"))
+        renderer = QSvgRenderer(QByteArray(source_data))
     if not renderer.isValid():
         raise RuntimeError(f"O SVG da marca não pôde ser carregado: {name}")
     source = renderer.defaultSize()
@@ -78,7 +84,14 @@ def _render_svg(name: str, width: int, height: int, margin: float = 0) -> QPixma
 
 def svg_pixmap(name: str, width: int, height: int) -> QPixmap:
     """Rasterize an official SVG into a transparent canvas, retaining its ratio."""
-    return _render_svg(name, width, height)
+    foreground = None
+    if name == "wordmark.svg":
+        # Imported lazily to keep startup's brand module independent of theme
+        # until Qt has created the application.
+        from .theme import current_resolved_mode, theme_color
+        if current_resolved_mode() == "dark":
+            foreground = theme_color("ink")
+    return _render_svg(name, width, height, foreground=foreground)
 
 
 def app_icon() -> QIcon:

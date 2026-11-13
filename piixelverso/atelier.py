@@ -33,7 +33,7 @@ from .resize_dialog import ResizeCanvasDialog
 from .selection import (
     SelectionPayload, capture_selection, cut_selection_changes, paste_selection_changes,
 )
-from .theme import APP_STYLE, BORDER, INK, PINK, apply_palette
+from .theme import APP_STYLE, BORDER, INK, PINK, apply_palette, theme_color
 from .ui.icons import icon
 from .ui.widgets import button, label
 
@@ -284,19 +284,30 @@ class AtelierModule(ModulePage):
         self.active_color_name.setText(name)
         self.active_color_name.setToolTip(f"<p>{escape(name)}</p>" if name else "")
         self.active_color_name.setVisible(bool(name))
-        active_border = TRANSPARENT_OUTLINE if is_transparent(color) else BORDER
+        active_border = (
+            TRANSPARENT_OUTLINE if is_transparent(color) else theme_color("border")
+        )
         self.active_swatch.setStyleSheet(
             f"background: {display_color(color)}; border: 2px solid {active_border}; border-radius: 5px;"
         )
         for value, swatch in self._swatches.items():
-            base_border = TRANSPARENT_OUTLINE if is_transparent(value) else BORDER
-            border = f"2px solid {INK}" if value == color else f"1px solid {base_border}"
+            base_border = (
+                TRANSPARENT_OUTLINE if is_transparent(value) else theme_color("border")
+            )
+            border = (
+                f"2px solid {theme_color('ink')}"
+                if value == color else f"1px solid {base_border}"
+            )
             swatch.setStyleSheet(
                 f"QPushButton {{ background: {display_color(value)}; border: {border}; "
-                f"border-radius: 5px; }} QPushButton:hover {{ border: 2px solid {PINK}; }}"
+                f"border-radius: 5px; }} QPushButton:hover {{ border: 2px solid {theme_color('pink')}; }}"
             )
         self.recent_colors_widget.set_colors(self._recent_colors, self.canvas.color)
         self._sync_recent_color_actions()
+
+    def refresh_theme(self) -> None:
+        """Refresh controls whose backgrounds deliberately show real bead colors."""
+        self.select_color(self.canvas.color, remember=False)
 
     def pick_color(self, color):
         self.select_color(color)

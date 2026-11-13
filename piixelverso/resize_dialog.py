@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 
 from .model import PixelDesign
 from .resize import ANCHOR_LABELS, MAX_CANVAS_SIZE, MIN_CANVAS_SIZE, count_cropped_pixels
-from .theme import INK, MUTED
+from .theme import INK, MUTED, apply_themed_stylesheet
 
 
 class ResizeCanvasDialog(QDialog):
@@ -25,7 +25,7 @@ class ResizeCanvasDialog(QDialog):
 
         intro = QLabel("Altere o tamanho da prancheta mantendo o tamanho de cada peça.")
         intro.setWordWrap(True)
-        intro.setStyleSheet(f"color: {MUTED};")
+        apply_themed_stylesheet(intro, f"color: {MUTED};")
         layout.addWidget(intro)
         current = QLabel(f"Tamanho atual: {design.width} × {design.height} células")
         layout.addWidget(current)
@@ -54,11 +54,11 @@ class ResizeCanvasDialog(QDialog):
         self.crop_label = QLabel()
         self.crop_label.setTextFormat(Qt.TextFormat.PlainText)
         self.crop_label.setWordWrap(True)
-        self.crop_label.setStyleSheet(f"color: {INK};")
+        apply_themed_stylesheet(self.crop_label, f"color: {INK};")
         layout.addWidget(self.crop_label)
         note = QLabel("Novos espaços ficam vazios. Você poderá desfazer o redimensionamento.")
         note.setWordWrap(True)
-        note.setStyleSheet(f"color: {MUTED}; font-size: 11px;")
+        apply_themed_stylesheet(note, f"color: {MUTED}; font-size: 11px;")
         layout.addWidget(note)
         layout.addStretch(1)
         self.buttons = QDialogButtonBox()

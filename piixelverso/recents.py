@@ -11,7 +11,9 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate, QStyle, QVBoxLayout, QWidget,
 )
 
-from .theme import BORDER, HOVER, INK, MUTED, PINK, WHITE
+from .theme import (
+    BORDER, HOVER, INK, MUTED, PINK, WHITE, apply_themed_stylesheet, theme_color,
+)
 
 if TYPE_CHECKING:
     from .preferences import RecentFile
@@ -63,14 +65,17 @@ class _RecentDelegate(QStyledItemDelegate):
         active = bool(option.state & (QStyle.StateFlag.State_Selected | QStyle.StateFlag.State_MouseOver))
         painter.save()
         painter.setClipRect(rect)
-        painter.fillRect(rect, QColor(HOVER if active else WHITE))
+        painter.fillRect(rect, QColor(theme_color("hover" if active else "white")))
         if option.state & QStyle.StateFlag.State_Selected:
-            painter.fillRect(rect.x(), rect.y() + 8, 3, rect.height() - 16, QColor(PINK))
+            painter.fillRect(
+                rect.x(), rect.y() + 8, 3, rect.height() - 16,
+                QColor(theme_color("pink")),
+            )
 
         thumbnail_rect = QRect(rect.x() + 10, rect.y() + 15, 66, 66)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(QPen(QColor(BORDER), 1))
-        painter.setBrush(QColor(WHITE))
+        painter.setPen(QPen(QColor(theme_color("border")), 1))
+        painter.setBrush(QColor(theme_color("white")))
         painter.drawRoundedRect(thumbnail_rect, 7, 7)
         preview = index.data(Qt.ItemDataRole.DecorationRole)
         if isinstance(preview, QPixmap) and not preview.isNull():
@@ -80,7 +85,7 @@ class _RecentDelegate(QStyledItemDelegate):
             y = thumbnail_rect.center().y() - scaled.height() // 2
             painter.drawPixmap(x, y, scaled)
         else:
-            painter.setPen(QPen(QColor(MUTED), 1.3))
+            painter.setPen(QPen(QColor(theme_color("muted")), 1.3))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawRoundedRect(thumbnail_rect.adjusted(21, 17, -20, -17), 2, 2)
             painter.drawLine(thumbnail_rect.x() + 27, thumbnail_rect.y() + 28,
@@ -93,17 +98,17 @@ class _RecentDelegate(QStyledItemDelegate):
         font.setPixelSize(12)
         font.setWeight(QFont.Weight.Bold)
         painter.setFont(font)
-        painter.setPen(QColor(INK))
+        painter.setPen(QColor(theme_color("ink")))
         name = painter.fontMetrics().elidedText(entry.name, Qt.TextElideMode.ElideRight, text_rect.width())
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, name)
 
         font.setPixelSize(10)
         font.setWeight(QFont.Weight.Normal)
         painter.setFont(font)
-        painter.setPen(QColor(MUTED))
+        painter.setPen(QColor(theme_color("muted")))
         path = painter.fontMetrics().elidedText(entry.path, Qt.TextElideMode.ElideMiddle, text_rect.width())
         painter.drawText(text_rect.translated(0, 26), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, path)
-        painter.setPen(QPen(QColor(BORDER), 1))
+        painter.setPen(QPen(QColor(theme_color("border")), 1))
         painter.drawLine(rect.x() + 10, rect.bottom(), rect.right() - 10, rect.bottom())
         painter.restore()
 
@@ -137,7 +142,7 @@ class RecentFilesPanel(QFrame):
         self.setObjectName("recentFilesPanel")
         self.setAccessibleName("Últimos arquivos modificados")
         self.setMinimumWidth(340)
-        self.setStyleSheet(f"""
+        apply_themed_stylesheet(self, f"""
             QFrame#recentFilesPanel {{ background: {WHITE}; border: 1px solid {BORDER}; border-radius: 15px; }}
             QLabel#recentTitle {{ color: {INK}; font-size: 16px; font-weight: 700; }}
             QLabel#recentEmpty {{ color: {MUTED}; font-size: 12px; }}

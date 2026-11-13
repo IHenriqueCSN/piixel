@@ -53,7 +53,7 @@ MODULES = (
     ModuleDefinition(
         id="settings",
         title="Configurações",
-        description="Defina o tamanho das peças e verifique atualizações do Piixel.",
+        description="Escolha a aparência, defina o tamanho das peças e verifique atualizações.",
         icon_name="settings",
         factory=_create_settings,
     ),

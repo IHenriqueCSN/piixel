@@ -1,6 +1,6 @@
 # Piixel · ferramentas do Piixelverso
 
-Piixel é um aplicativo desktop do Piixelverso, organizado em módulos. A tela inicial oferece o **Ateliê**, para criar pixel arts e contar as peças por cor, o **Piixelfone**, para conversar e compartilhar designs com criptografia de ponta a ponta, e **Configurações**, para definir o tamanho das peças e verificar atualizações. A interface usa Python e Qt (PySide6), e os designs ficam em arquivos locais `.pii`.
+Piixel é um aplicativo desktop do Piixelverso, organizado em módulos. A tela inicial oferece o **Ateliê**, para criar pixel arts e contar as peças por cor, o **Piixelfone**, para conversar e compartilhar designs com criptografia de ponta a ponta, e **Configurações**, para escolher a aparência, definir o tamanho das peças e verificar atualizações. A interface usa Python e Qt (PySide6), e os designs ficam em arquivos locais `.pii`.
 
 Ao iniciar, uma pequena tela com o Pii mostra **Carregando…**, uma barra de atividade animada e **Desenvolvido por Piixelverso**. Ela abre antes de carregar o editor e fecha automaticamente assim que a janela principal aparece, sem uma espera mínima. A animação continua funcionando durante a inicialização.
 
@@ -40,6 +40,7 @@ No Piixelfone, ações como abrir conversas, enviar mensagens ou arquivos e rege
 - Salvamento e leitura no formato binário `.pii`, preservando dimensões, nome e cores.
 - Exportação de PNG em quadradinhos ou rosquinhas, com grade opcional e medidas em milímetros.
 - Configuração persistente do tamanho de cada peça, com padrão de 5 mm.
+- Aparência clara, escura ou sincronizada com o sistema, sem alterar as cores da prancheta.
 
 A contagem é a base para controlar materiais e calcular preços. Esta versão ainda não mantém um cadastro de estoque, custos, margens ou preços de venda.
 
@@ -204,7 +205,9 @@ Clique em **Escolher onde salvar…** para selecionar a pasta e o nome do PNG. O
 
 ## Configurações
 
-Abra **Configurações** na tela inicial, por **Arquivo → Configurações** no Ateliê ou com **Ctrl+,**. Em **Lado da peça**, informe o tamanho em milímetros e clique em **Salvar configurações**. O valor padrão é **5 mm**, como uma peça hama beads; são aceitos valores de **0,1 a 100 mm**, com até duas casas decimais.
+Abra **Configurações** na tela inicial, por **Arquivo → Configurações** no Ateliê ou com **Ctrl+,**. Em **Aparência**, escolha **Sistema**, **Claro** ou **Escuro**. A opção Sistema acompanha o tema informado pelo Windows ou Linux e reage a mudanças feitas enquanto o Piixel está aberto. A escolha é visualizada imediatamente e passa a valer nas próximas sessões depois de clicar em **Salvar configurações**. O modo escuro usa superfícies off-black e tons de rosa menos saturados; a prancheta mantém exatamente as mesmas cores para preservar a leitura do design.
+
+Em **Lado da peça**, informe o tamanho em milímetros e clique em **Salvar configurações**. O valor padrão é **5 mm**, como uma peça hama beads; são aceitos valores de **0,1 a 100 mm**, com até duas casas decimais.
 
 ![Módulo Configurações com tamanho da peça em milímetros](docs/previa-configuracoes.png)
 

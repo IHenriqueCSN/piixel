@@ -19,6 +19,7 @@ MAX_THUMBNAIL_BYTES = 64 * 1024
 MAX_PREFERENCES_BYTES = 4 * 1024 * 1024
 MAX_COLOR_NAME = 80
 DEFAULT_PIECE_SIZE_MM = 5.0
+DEFAULT_APPEARANCE_MODE = "system"
 MIN_PIECE_SIZE_MM = 0.1
 MAX_PIECE_SIZE_MM = 100.0
 
@@ -122,6 +123,7 @@ class PreferencesStore:
         self._recents: list[RecentFile] = []
         self._colors: list[SavedColor] = []
         self._piece_size_mm = DEFAULT_PIECE_SIZE_MM
+        self._appearance_mode = DEFAULT_APPEARANCE_MODE
         self._load()
 
     def recent_files(self) -> list[RecentFile]:
@@ -134,12 +136,36 @@ class PreferencesStore:
     def piece_size_mm(self) -> float:
         return self._piece_size_mm
 
+    def appearance_mode(self) -> str:
+        return self._appearance_mode
+
     def set_piece_size_mm(self, value) -> None:
         try:
             size = validate_piece_size_mm(value)
         except ValueError as error:
             raise PreferencesError(str(error)) from error
         self._commit(self._recents, self._colors, piece_size_mm=size)
+
+    def set_appearance_mode(self, mode: str) -> None:
+        from .theme import validate_appearance_mode
+        try:
+            appearance = validate_appearance_mode(mode)
+        except ValueError as error:
+            raise PreferencesError(str(error)) from error
+        self._commit(self._recents, self._colors, appearance_mode=appearance)
+
+    def set_settings(self, piece_size_mm, appearance_mode: str) -> None:
+        """Persist the settings screen atomically."""
+        from .theme import validate_appearance_mode
+        try:
+            size = validate_piece_size_mm(piece_size_mm)
+            appearance = validate_appearance_mode(appearance_mode)
+        except ValueError as error:
+            raise PreferencesError(str(error)) from error
+        self._commit(
+            self._recents, self._colors,
+            piece_size_mm=size, appearance_mode=appearance,
+        )
 
     def record_file(self, path: str | Path, thumbnail: bytes) -> None:
         normalized = _absolute_path(path)
@@ -180,16 +206,17 @@ class PreferencesStore:
             if len(raw) > MAX_PREFERENCES_BYTES:
                 raise PreferencesError("O arquivo de preferências excede o tamanho permitido.")
             data = json.loads(raw.decode("utf-8"))
-            recents, colors, piece_size_mm = self._decode(data)
+            recents, colors, piece_size_mm, appearance_mode = self._decode(data)
         except FileNotFoundError:
             return
         except (OSError, ValueError, TypeError, UnicodeError, binascii.Error) as error:
             self.load_error = f"Não foi possível carregar as preferências locais: {error}"
             return
-        self._recents, self._colors, self._piece_size_mm = recents, colors, piece_size_mm
+        self._recents, self._colors = recents, colors
+        self._piece_size_mm, self._appearance_mode = piece_size_mm, appearance_mode
 
     @staticmethod
-    def _decode(data) -> tuple[list[RecentFile], list[SavedColor], float]:
+    def _decode(data) -> tuple[list[RecentFile], list[SavedColor], float, str]:
         if not isinstance(data, dict) or type(data.get("version")) is not int or data["version"] != 1:
             raise PreferencesError("A versão das preferências não é suportada.")
         records, color_records = data.get("recent_files"), data.get("saved_colors")
@@ -221,14 +248,24 @@ class PreferencesStore:
             item = _saved_color(record.get("color"), record.get("name", ""))
             colors[item.color] = item
         piece_size_mm = validate_piece_size_mm(data.get("piece_size_mm", DEFAULT_PIECE_SIZE_MM))
-        return recent, list(colors.values()), piece_size_mm
+        from .theme import validate_appearance_mode
+        appearance_mode = validate_appearance_mode(
+            data.get("appearance_mode", DEFAULT_APPEARANCE_MODE)
+        )
+        return recent, list(colors.values()), piece_size_mm, appearance_mode
 
     def _commit(self, recent: list[RecentFile], colors: list[SavedColor], *,
-                piece_size_mm: float | None = None) -> None:
+                piece_size_mm: float | None = None,
+                appearance_mode: str | None = None) -> None:
         size = self._piece_size_mm if piece_size_mm is None else validate_piece_size_mm(piece_size_mm)
+        from .theme import validate_appearance_mode
+        appearance = self._appearance_mode if appearance_mode is None else validate_appearance_mode(
+            appearance_mode
+        )
         data = {
             "version": 1,
             "piece_size_mm": size,
+            "appearance_mode": appearance,
             "recent_files": [
                 {"path": entry.path, "modified_ns": entry.modified_ns,
                  "thumbnail": base64.b64encode(entry.thumbnail).decode("ascii")}
@@ -263,4 +300,5 @@ class PreferencesStore:
             raise PreferencesError(f"Não foi possível salvar as preferências locais: {error}") from error
         self._recents, self._colors = list(recent), list(colors)
         self._piece_size_mm = size
+        self._appearance_mode = appearance
         self.load_error = None

@@ -12,7 +12,7 @@ def create_splash():
     from PySide6.QtWidgets import QApplication, QLabel, QProgressBar, QVBoxLayout, QWidget
 
     from .brand import svg_pixmap
-    from .theme import BLUE, BORDER, CREAM, INK, MUTED, PINK
+    from .theme import BLUE, BORDER, CREAM, INK, MUTED, PINK, themed_stylesheet
 
     window = QWidget(
         None, Qt.WindowType.SplashScreen | Qt.WindowType.FramelessWindowHint
@@ -21,14 +21,14 @@ def create_splash():
     window.setWindowTitle("Piixel — Carregando…")
     window.setAccessibleName("Inicialização do Piixel")
     window.setFixedSize(400, 300)
-    window.setStyleSheet(f"""
+    window.setStyleSheet(themed_stylesheet(f"""
         QWidget#startupSplash {{ background: {CREAM}; border: 1px solid {BORDER}; }}
         QLabel {{ color: {INK}; background: transparent; border: 0; }}
         QLabel#startupLoading {{ font-size: 16px; font-weight: 600; }}
         QLabel#startupCredit {{ color: {MUTED}; font-size: 11px; }}
         QProgressBar {{ background: {BLUE}; border: 0; border-radius: 4px; }}
         QProgressBar::chunk {{ background: {PINK}; border-radius: 4px; width: 72px; }}
-    """)
+    """))
 
     layout = QVBoxLayout(window)
     layout.setContentsMargins(32, 22, 32, 22)
@@ -117,6 +117,12 @@ def run_splash(*, page_loading: dict | None = None) -> int:
         app.setApplicationName("Piixel")
         app.setOrganizationName("Piixelverso")
         app.setQuitOnLastWindowClosed(True)
+        # The helper is a separate process, so it resolves the saved appearance
+        # before constructing either startup or page-loading feedback.
+        from .preferences import PreferencesStore
+        from .theme import ensure_theme_controller
+        preferences = PreferencesStore()
+        window_theme = ensure_theme_controller(app, preferences.appearance_mode())
         if page_loading is None:
             window = create_splash()
         else:
@@ -126,6 +132,7 @@ def run_splash(*, page_loading: dict | None = None) -> int:
             return 0
 
         timer = QTimer(window)
+        window._piixel_theme = window_theme
         timer.setInterval(12)
 
         def close_if_ready():
