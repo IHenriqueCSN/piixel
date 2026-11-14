@@ -131,9 +131,9 @@ class ReferenceImageTests(unittest.TestCase):
     def test_local_file_drop_is_recognized(self):
         mime = QMimeData()
         mime.setUrls([QUrl.fromLocalFile(str(self.image_path))])
-        self.assertEqual(
-            self.window.reference_panel._local_image_path(mime), str(self.image_path)
-        )
+        dropped = self.window.reference_panel._local_image_path(mime)
+        self.assertIsNotNone(dropped)
+        self.assertEqual(Path(dropped), self.image_path)
 
 
 if __name__ == "__main__":
