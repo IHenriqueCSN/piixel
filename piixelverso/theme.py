@@ -155,6 +155,9 @@ QMainWindow, #root {{ background: {CREAM}; }}
 #muted {{ color: {MUTED}; font-size: 11px; }}
 #tiny {{ color: {MUTED}; font-size: 10px; }}
 #canvasStage {{ background: {PALE_BLUE}; border: 0; }}
+QSplitter#atelierReferenceSplitter::handle {{ background: {BORDER}; border-radius: 3px; }}
+QSplitter#atelierReferenceSplitter::handle:hover {{ background: {PINK}; }}
+QSplitter#atelierReferenceSplitter::handle:disabled {{ background: transparent; }}
 #editorHeading {{ font-weight: 700; font-size: 12px; }}
 #canvasFooter {{ background: {WHITE}; border-top: 1px solid {BORDER}; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }}
 QPushButton {{ background: {WHITE}; border: 1px solid {BORDER}; border-radius: 7px; padding: 9px 13px; font-weight: 600; }}

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QEvent, Qt, Signal
 from PySide6.QtGui import QImage, QImageReader, QPixmap
 from PySide6.QtWidgets import (
     QFrame, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QHBoxLayout,
@@ -178,18 +178,27 @@ class ReferencePanel(QFrame):
         layout.addWidget(self.source_label)
 
         self.content = QStackedWidget()
-        empty = QLabel(
+        self.empty_label = QLabel(
             "Abra, cole ou arraste uma imagem para cá.\n\n"
             "A referência fica somente nesta sessão e não entra no arquivo .pii."
         )
-        empty.setObjectName("referenceEmpty")
-        empty.setTextFormat(Qt.TextFormat.PlainText)
-        empty.setWordWrap(True)
-        empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.content.addWidget(empty)
+        self.empty_label.setObjectName("referenceEmpty")
+        self.empty_label.setTextFormat(Qt.TextFormat.PlainText)
+        self.empty_label.setWordWrap(True)
+        self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.content.addWidget(self.empty_label)
         self.viewer = ReferenceGraphicsView()
         self.content.addWidget(self.viewer)
         layout.addWidget(self.content, 1)
+
+        # QGraphicsView and its viewport receive drag events before their parent.
+        # Filtering every visible drop surface keeps file-manager drags working
+        # consistently on X11, Wayland and Windows.
+        for drop_surface in (
+            self.empty_label, self.viewer, self.viewer.viewport(),
+        ):
+            drop_surface.setAcceptDrops(True)
+            drop_surface.installEventFilter(self)
 
         controls = QHBoxLayout()
         controls.setSpacing(5)
@@ -249,24 +258,42 @@ class ReferencePanel(QFrame):
         return None
 
     def dragEnterEvent(self, event) -> None:
-        mime = event.mimeData()
-        if mime.hasImage() or self._local_image_path(mime):
+        if self._accepts_mime(event.mimeData()):
             event.acceptProposedAction()
         else:
             event.ignore()
 
     def dropEvent(self, event) -> None:
-        mime = event.mimeData()
+        if self._handle_drop(event.mimeData()):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def eventFilter(self, watched, event) -> bool:
+        if event.type() in (QEvent.Type.DragEnter, QEvent.Type.DragMove):
+            if self._accepts_mime(event.mimeData()):
+                event.acceptProposedAction()
+                return True
+            return False
+        if event.type() == QEvent.Type.Drop:
+            if self._handle_drop(event.mimeData()):
+                event.acceptProposedAction()
+                return True
+            return False
+        return super().eventFilter(watched, event)
+
+    def _accepts_mime(self, mime) -> bool:
+        return bool(mime.hasImage() or self._local_image_path(mime))
+
+    def _handle_drop(self, mime) -> bool:
         path = self._local_image_path(mime)
         if path:
             self.file_dropped.emit(path)
-            event.acceptProposedAction()
-            return
+            return True
         if mime.hasImage():
             payload = mime.imageData()
             image = payload.toImage() if isinstance(payload, QPixmap) else payload
-            if isinstance(image, QImage):
+            if isinstance(image, QImage) and not image.isNull():
                 self.image_dropped.emit(image)
-                event.acceptProposedAction()
-                return
-        event.ignore()
+                return True
+        return False

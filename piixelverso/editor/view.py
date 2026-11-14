@@ -4,7 +4,8 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame, QGridLayout, QHBoxLayout, QLabel, QLayout, QLineEdit,
-    QPushButton, QScrollArea, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget,
+    QPushButton, QScrollArea, QSizePolicy, QSplitter, QStackedWidget,
+    QVBoxLayout, QWidget,
 )
 
 from ..brand import svg_pixmap
@@ -25,7 +26,7 @@ VIEW_ATTRIBUTES = (
     "palette_scroll", "palette_grid", "active_swatch", "active_hex",
     "active_color_name", "canvas", "viewport", "position_label", "dimensions",
     "canvas_view_label", "total_label", "color_total", "empty_total", "count_view",
-    "recent_colors_widget", "side_stack", "reference_panel",
+    "recent_colors_widget", "workspace_splitter", "side_stack", "reference_panel",
 )
 
 
@@ -109,17 +110,33 @@ class AtelierView(QWidget):
         workspace.setContentsMargins(28, 0, 28, 0)
         workspace.setSpacing(18)
         workspace.addWidget(self._left_panel())
-        workspace.addWidget(self._editor(design), 1)
+        self.workspace_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.workspace_splitter.setObjectName("atelierReferenceSplitter")
+        self.workspace_splitter.setChildrenCollapsible(False)
+        self.workspace_splitter.setHandleWidth(9)
+        editor = self._editor(design)
+        editor.setMinimumWidth(420)
+        self.workspace_splitter.addWidget(editor)
         self.side_stack = QStackedWidget()
         self.side_stack.setObjectName("atelierSidePanel")
-        self.side_stack.setFixedWidth(280)
+        self.side_stack.setMinimumWidth(280)
         self.side_stack.addWidget(self._materials())
         self.reference_panel = ReferencePanel()
         self.reference_panel.close_requested.connect(
             lambda: self.show_reference_panel(False)
         )
         self.side_stack.addWidget(self.reference_panel)
-        workspace.addWidget(self.side_stack)
+        self.workspace_splitter.addWidget(self.side_stack)
+        self.workspace_splitter.setStretchFactor(0, 1)
+        self.workspace_splitter.setStretchFactor(1, 0)
+        self.workspace_splitter.setSizes([800, 280])
+        self._reference_width = 360
+        self.workspace_splitter.splitterMoved.connect(self._remember_reference_width)
+        self.workspace_splitter.handle(1).setEnabled(False)
+        self.workspace_splitter.handle(1).setToolTip(
+            "Abra a imagem de referência para ajustar a largura"
+        )
+        workspace.addWidget(self.workspace_splitter, 1)
         layout.addLayout(workspace, 1)
 
         bottom = QHBoxLayout()
@@ -275,7 +292,22 @@ class AtelierView(QWidget):
         return pane
 
     def show_reference_panel(self, visible: bool = True) -> None:
+        total = sum(self.workspace_splitter.sizes())
+        if not visible and self.side_stack.currentWidget() is self.reference_panel:
+            self._reference_width = self.side_stack.width()
         self.side_stack.setCurrentWidget(
             self.reference_panel if visible else self.side_stack.widget(0)
         )
+        handle = self.workspace_splitter.handle(1)
+        handle.setEnabled(visible)
+        handle.setToolTip(
+            "Arraste para ajustar a largura da imagem de referência"
+            if visible else "Abra a imagem de referência para ajustar a largura"
+        )
+        target = self._reference_width if visible else 280
+        self.workspace_splitter.setSizes([max(420, total - target), target])
+
+    def _remember_reference_width(self, _position: int, _index: int) -> None:
+        if self.side_stack.currentWidget() is self.reference_panel:
+            self._reference_width = self.side_stack.width()
 

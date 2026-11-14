@@ -9,8 +9,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from PySide6.QtCore import QMimeData, QUrl
-from PySide6.QtGui import QImage, QColor
+from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
+from PySide6.QtGui import QColor, QDragEnterEvent, QDropEvent, QImage
 from PySide6.QtWidgets import QApplication
 
 from piixelverso.atelier import AtelierModule
@@ -134,6 +134,55 @@ class ReferenceImageTests(unittest.TestCase):
         dropped = self.window.reference_panel._local_image_path(mime)
         self.assertIsNotNone(dropped)
         self.assertEqual(Path(dropped), self.image_path)
+
+    def test_file_drop_reaches_empty_surface_and_graphics_viewport(self):
+        replacement = self.root / "segunda imagem.png"
+        image = QImage(32, 64, QImage.Format.Format_RGB32)
+        image.fill(QColor("#245448"))
+        self.assertTrue(image.save(str(replacement)))
+
+        for target, path in (
+            (self.window.reference_panel.empty_label, self.image_path),
+            (self.window.reference_panel.viewer.viewport(), replacement),
+        ):
+            mime = QMimeData()
+            mime.setUrls([QUrl.fromLocalFile(str(path))])
+            enter = QDragEnterEvent(
+                QPoint(8, 8), Qt.DropAction.CopyAction, mime,
+                Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
+            )
+            QApplication.sendEvent(target, enter)
+            self.assertTrue(enter.isAccepted())
+            drop = QDropEvent(
+                QPointF(8, 8), Qt.DropAction.CopyAction, mime,
+                Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
+            )
+            QApplication.sendEvent(target, drop)
+            self.assertTrue(drop.isAccepted())
+            self.assertEqual(self.window.reference_path, path.absolute())
+
+    def test_reference_width_is_adjustable_and_counts_return_to_compact_width(self):
+        self.window.show_reference_panel()
+        self.app.processEvents()
+        splitter = self.window.workspace_splitter
+        total = sum(splitter.sizes())
+        initial_editor = splitter.widget(0).width()
+
+        splitter.setSizes([total - 430, 430])
+        self.app.processEvents()
+
+        self.assertGreaterEqual(self.window.side_stack.width(), 420)
+        self.assertLess(splitter.widget(0).width(), initial_editor)
+        remembered = self.window.side_stack.width()
+        self.window.view.show_reference_panel(False)
+        self.app.processEvents()
+        self.assertLessEqual(self.window.side_stack.width(), 290)
+        self.assertFalse(splitter.handle(1).isEnabled())
+
+        self.window.show_reference_panel()
+        self.app.processEvents()
+        self.assertTrue(splitter.handle(1).isEnabled())
+        self.assertGreaterEqual(self.window.side_stack.width(), remembered - 2)
 
 
 if __name__ == "__main__":

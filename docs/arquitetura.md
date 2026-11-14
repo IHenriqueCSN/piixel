@@ -45,7 +45,8 @@ A identidade do documento é preservada durante redimensionamentos. Isso permite
 - `editor/new_design_dialog.py` contém o diálogo de novo design.
 - `ui/icons.py` e `ui/widgets.py` fornecem recursos visuais compartilhados, sem depender do Ateliê.
 - `theme.py` resolve a preferência clara, escura ou do sistema, atualiza a paleta e reaplica estilos registrados em tempo real. As cores da prancheta permanecem constantes e independentes do tema da interface.
-- `reference.py` carrega e valida imagens locais, além de apresentar zoom, movimento e rotação. A imagem pertence somente à sessão da interface; não faz parte do documento, do histórico ou das preferências.
+- `reference.py` carrega e valida imagens locais, além de apresentar zoom, movimento e rotação. Os eventos de arraste são tratados nas superfícies vazia e gráfica para manter o comportamento em X11, Wayland e Windows. A imagem pertence somente à sessão da interface; não faz parte do documento, do histórico ou das preferências.
+- Um `QSplitter` em `editor/view.py` separa a prancheta do painel lateral. A alça fica ativa durante a referência, conserva a largura escolhida na sessão e retorna a contagem à largura compacta.
 - `atelier.py` conecta a view, a sessão e os fluxos de interação, como diálogos de abrir, salvar, exportar e escolher cores. Ele mantém os acessos existentes a `design`, `file_path`, `history` e aos widgets usados pela interface e pelos testes.
 
 Os construtores de comandos anteriormente importados de `atelier.py` continuam disponíveis como adaptadores para a sessão. O código novo usa os comandos de `editor/history.py` diretamente; esses comandos não dependem do coordenador ou dos widgets.

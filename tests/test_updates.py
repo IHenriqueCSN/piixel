@@ -39,7 +39,7 @@ class Response(io.BytesIO):
         self.close()
 
 
-def release_payload(version="0.6.0", *, prerelease=False, assets=True):
+def release_payload(version="0.6.1", *, prerelease=False, assets=True):
     installer = f"Piixel-Setup-{version}-x64.exe"
     files = []
     if assets:
@@ -93,10 +93,10 @@ class UpdateClientTests(unittest.TestCase):
         payload = release_payload()
         client = self.client({LATEST_RELEASE_URL: json.dumps(payload).encode()})
         release = client.latest("0.3.0")
-        self.assertEqual(release.version, "0.6.0")
-        self.assertEqual(release.installer_name, "Piixel-Setup-0.6.0-x64.exe")
+        self.assertEqual(release.version, "0.6.1")
+        self.assertEqual(release.installer_name, "Piixel-Setup-0.6.1-x64.exe")
         self.assertIn("Novidades", release.notes)
-        self.assertIsNone(client.latest("0.6.0"))
+        self.assertIsNone(client.latest("0.6.1"))
         self.assertIsNone(client.latest("1.0.0"))
 
         broken = self.client({LATEST_RELEASE_URL: json.dumps(release_payload(assets=False)).encode()})
@@ -113,7 +113,7 @@ class UpdateClientTests(unittest.TestCase):
         installer = b"MZ" + os.urandom(10000)
         digest = hashlib.sha256(installer).hexdigest()
         payload = release_payload()
-        name = "Piixel-Setup-0.6.0-x64.exe"
+        name = "Piixel-Setup-0.6.1-x64.exe"
         urls = {
             LATEST_RELEASE_URL: json.dumps(payload).encode(),
             f"https://github.com/files/{name}": (installer, "https://objects.githubusercontent.com/file"),
@@ -135,9 +135,9 @@ class UpdateClientTests(unittest.TestCase):
 
     def test_bad_checksum_and_cancellation_never_publish_a_partial_installer(self):
         data = b"MZunsafe"
-        name = "Piixel-Setup-0.6.0-x64.exe"
+        name = "Piixel-Setup-0.6.1-x64.exe"
         release = Release(
-            "0.6.0", "", "", name, "https://github.com/installer",
+            "0.6.1", "", "", name, "https://github.com/installer",
             "https://github.com/checksum", "https://github.com/release",
         )
         wrong = "0" * 64
@@ -213,7 +213,7 @@ class UpdateControllerTests(unittest.TestCase):
         self.assertTrue(controller.check_automatically())
         self.assertTrue(controller.busy)
         self.wait_until(lambda: not controller.busy)
-        self.assertEqual(client.version, "0.6.0")
+        self.assertEqual(client.version, "0.6.1")
         self.assertIn("versão mais recente", statuses[-1])
         controller.shutdown()
 
@@ -229,7 +229,7 @@ class UpdateControllerTests(unittest.TestCase):
 
     def test_install_respects_unsaved_work_before_starting_helper(self):
         controller = UpdateController(self.window, supported=True)
-        installer = Path(self.directory.name) / "Piixel-Setup-0.6.0-x64.exe"
+        installer = Path(self.directory.name) / "Piixel-Setup-0.6.1-x64.exe"
         installer.write_bytes(b"MZ")
         self.window.close_allowed = False
         with patch("piixelverso.startup.launch_update_after_exit") as launch:
@@ -239,7 +239,7 @@ class UpdateControllerTests(unittest.TestCase):
 
     def test_install_keeps_app_open_when_helper_does_not_confirm_startup(self):
         controller = UpdateController(self.window, supported=True)
-        installer = Path(self.directory.name) / "Piixel-Setup-0.6.0-x64.exe"
+        installer = Path(self.directory.name) / "Piixel-Setup-0.6.1-x64.exe"
         installer.write_bytes(b"MZ")
         with patch("piixelverso.startup.launch_update_after_exit", return_value=False), \
              patch("piixelverso.update_ui.QMessageBox.warning") as warning, \
@@ -272,7 +272,7 @@ class WindowsUpdateLaunchTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            installer = root / "Piixel-Setup-0.6.0-x64.exe"
+            installer = root / "Piixel-Setup-0.6.1-x64.exe"
             installer.write_bytes(b"MZ")
             powershell = root / "Windows" / "System32/WindowsPowerShell/v1.0/powershell.exe"
             powershell.parent.mkdir(parents=True)
@@ -310,7 +310,7 @@ class WindowsUpdateLaunchTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            installer = root / "Piixel-Setup-0.6.0-x64.exe"
+            installer = root / "Piixel-Setup-0.6.1-x64.exe"
             installer.write_bytes(b"MZ")
             powershell = root / "Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
             powershell.parent.mkdir(parents=True)

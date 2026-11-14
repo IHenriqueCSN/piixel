@@ -197,13 +197,16 @@ Salve o `.pii` para conservar as novas dimensões entre sessões. Designs antigo
 ## Usar uma imagem de referência
 
 No Ateliê, use **Exibir → Imagem de referência** ou **Ctrl+Shift+R**. O painel
-aparece na coluna da direita, no lugar da contagem de materiais, sem diminuir a
-prancheta. Use **← Contagem** para voltar aos números; a imagem permanece pronta
-para quando o painel for aberto novamente.
+aparece na coluna da direita, no lugar da contagem de materiais. Arraste a divisória
+pela borda esquerda do painel para mudar sua largura; ele aproveita a folga azul ao
+redor da grade antes de reduzir a área visível da prancheta. Use **← Contagem**
+para voltar aos números e à largura compacta; a imagem permanece pronta para quando
+o painel for aberto novamente.
 
 Clique em **Abrir imagem…** para escolher PNG, JPEG ou WebP. Também é possível
-colar uma imagem copiada com **Colar** ou arrastar uma imagem ou arquivo para o
-painel. A roda do mouse amplia e reduz; arraste a imagem ampliada para se mover.
+colar uma imagem copiada com **Colar** ou arrastar uma imagem ou arquivo diretamente
+para a área de visualização, esteja ela vazia ou não. A roda do mouse amplia e
+reduz; arraste a imagem ampliada para se mover.
 Os controles inferiores permitem ajustar a imagem ao espaço e girá-la em passos
 de 90 graus.
 
