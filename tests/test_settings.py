@@ -142,20 +142,30 @@ class SettingsModuleTests(unittest.TestCase):
         self.assertEqual(PreferencesStore(self.path).piece_size_mm(), 2.6)
         self.assertEqual(self.module.status_label.text(), "Configurações salvas.")
 
-    def test_appearance_previews_immediately_and_persists_only_on_save(self):
+    def test_appearance_applies_and_persists_immediately(self):
         self.assertEqual(self.module.appearance_input.currentData(), "system")
         index = self.module.appearance_input.findData("dark")
         self.module.appearance_input.setCurrentIndex(index)
         self.app.processEvents()
         self.assertEqual(self.theme.resolved_mode, "dark")
-        self.assertEqual(self.preferences.appearance_mode(), "system")
-        self.assertFalse(self.path.exists())
-        self.assertEqual(self.module.status_label.text(), "Alteração ainda não salva.")
-
-        QTest.mouseClick(self.module.save_button, Qt.MouseButton.LeftButton)
-        self.app.processEvents()
+        self.assertEqual(self.preferences.appearance_mode(), "dark")
+        self.assertTrue(self.path.exists())
         self.assertEqual(PreferencesStore(self.path).appearance_mode(), "dark")
-        self.assertEqual(self.module.status_label.text(), "Configurações salvas.")
+        self.assertEqual(self.module.status_label.text(), "")
+
+    def test_appearance_save_failure_restores_the_previous_choice(self):
+        index = self.module.appearance_input.findData("dark")
+        with patch.object(
+            self.preferences, "set_appearance_mode", side_effect=PreferencesError("Sem espaço")
+        ), patch("piixelverso.settings.QMessageBox.warning") as warning:
+            self.module.appearance_input.setCurrentIndex(index)
+            self.app.processEvents()
+        warning.assert_called_once()
+        self.assertEqual(self.module.appearance_input.currentData(), "system")
+        self.assertEqual(self.preferences.appearance_mode(), "system")
+        self.assertEqual(self.theme.resolved_mode, "light")
+        self.assertFalse(self.path.exists())
+        self.assertIn("Não foi possível salvar", self.module.status_label.text())
 
     def test_navigation_keeps_draft_until_explicit_save_and_home_signal_works(self):
         homes = []

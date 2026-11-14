@@ -1,7 +1,7 @@
 """Application preferences, independent of the Ateliê document."""
 from __future__ import annotations
 
-from PySide6.QtCore import QLocale, Qt
+from PySide6.QtCore import QLocale, QSignalBlocker, Qt
 from PySide6.QtWidgets import (
     QComboBox, QDoubleSpinBox, QFormLayout, QFrame, QHBoxLayout, QLabel,
     QMessageBox, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
@@ -126,7 +126,7 @@ class SettingsModule(ModulePage):
         appearance_layout.addLayout(appearance_form)
         appearance_layout.addWidget(self._label(
             "A prancheta mantém sempre as mesmas cores para que o desenho continue fiel. "
-            "A escolha é visualizada imediatamente e será guardada ao salvar.", "settingsNote"
+            "A escolha é aplicada e salva automaticamente.", "settingsNote"
         ))
         contents.addWidget(appearance_card)
 
@@ -199,16 +199,29 @@ class SettingsModule(ModulePage):
         layout.addWidget(scroll, 1)
 
     def _update_status(self):
-        changed = (
-            self.piece_size_input.value() != self.preferences.piece_size_mm()
-            or self.appearance_input.currentData() != self.preferences.appearance_mode()
-        )
+        changed = self.piece_size_input.value() != self.preferences.piece_size_mm()
         self.status_label.setText("Alteração ainda não salva." if changed else "")
 
     def _appearance_changed(self):
+        mode = self.appearance_input.currentData()
+        previous = self.preferences.appearance_mode()
+        try:
+            self.preferences.set_appearance_mode(mode)
+        except (OSError, ValueError) as error:
+            blocker = QSignalBlocker(self.appearance_input)
+            self.appearance_input.setCurrentIndex(self.appearance_input.findData(previous))
+            del blocker
+            if self.theme is not None:
+                self.theme.set_mode(previous)
+            self.status_label.setText("Não foi possível salvar a aparência.")
+            QMessageBox.warning(
+                self.window(), "Não foi possível salvar a aparência", str(error)
+            )
+            return False
         if self.theme is not None:
-            self.theme.set_mode(self.appearance_input.currentData())
+            self.theme.set_mode(mode)
         self._update_status()
+        return True
 
     def save_settings(self):
         self.piece_size_input.interpretText()
@@ -224,7 +237,7 @@ class SettingsModule(ModulePage):
         return True
 
     def prepare_navigation(self):
-        """Keep the pending input in this session; only Save writes preferences."""
+        """Keep a pending piece size; appearance choices save immediately."""
         self.piece_size_input.interpretText()
 
     def set_active(self, active: bool):

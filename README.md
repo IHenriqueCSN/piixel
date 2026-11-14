@@ -207,7 +207,7 @@ Clique em **Escolher onde salvar…** para selecionar a pasta e o nome do PNG. O
 
 ## Configurações
 
-Abra **Configurações** na tela inicial, por **Arquivo → Configurações** no Ateliê ou com **Ctrl+,**. Em **Aparência**, escolha **Sistema**, **Claro** ou **Escuro**. A opção Sistema acompanha o tema informado pelo Windows ou Linux e reage a mudanças feitas enquanto o Piixel está aberto. A escolha é visualizada imediatamente e passa a valer nas próximas sessões depois de clicar em **Salvar configurações**. O modo escuro usa superfícies off-black e tons de rosa menos saturados; a prancheta mantém exatamente as mesmas cores para preservar a leitura do design.
+Abra **Configurações** na tela inicial, por **Arquivo → Configurações** no Ateliê ou com **Ctrl+,**. Em **Aparência**, escolha **Sistema**, **Claro** ou **Escuro**. A opção Sistema acompanha o tema informado pelo Windows ou Linux e reage a mudanças feitas enquanto o Piixel está aberto. A escolha é aplicada e salva automaticamente, continuando ativa nas próximas sessões. O modo escuro usa superfícies off-black e tons de rosa menos saturados; a prancheta mantém exatamente as mesmas cores para preservar a leitura do design.
 
 Em **Lado da peça**, informe o tamanho em milímetros e clique em **Salvar configurações**. O valor padrão é **5 mm**, como uma peça hama beads; são aceitos valores de **0,1 a 100 mm**, com até duas casas decimais.
 
