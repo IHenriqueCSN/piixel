@@ -4,7 +4,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame, QGridLayout, QHBoxLayout, QLabel, QLayout, QLineEdit,
-    QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget,
+    QPushButton, QScrollArea, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget,
 )
 
 from ..brand import svg_pixmap
@@ -12,6 +12,7 @@ from ..canvas import PixelCanvas
 from ..commands import EditorCommandBar
 from ..counts import ColorCountsView
 from ..materials import material_reference
+from ..reference import ReferencePanel
 from ..ui.widgets import label
 from .palette import PALETTE
 from .recent_colors import RecentColorsWidget
@@ -24,7 +25,7 @@ VIEW_ATTRIBUTES = (
     "palette_scroll", "palette_grid", "active_swatch", "active_hex",
     "active_color_name", "canvas", "viewport", "position_label", "dimensions",
     "canvas_view_label", "total_label", "color_total", "empty_total", "count_view",
-    "recent_colors_widget",
+    "recent_colors_widget", "side_stack", "reference_panel",
 )
 
 
@@ -109,7 +110,16 @@ class AtelierView(QWidget):
         workspace.setSpacing(18)
         workspace.addWidget(self._left_panel())
         workspace.addWidget(self._editor(design), 1)
-        workspace.addWidget(self._materials())
+        self.side_stack = QStackedWidget()
+        self.side_stack.setObjectName("atelierSidePanel")
+        self.side_stack.setFixedWidth(280)
+        self.side_stack.addWidget(self._materials())
+        self.reference_panel = ReferencePanel()
+        self.reference_panel.close_requested.connect(
+            lambda: self.show_reference_panel(False)
+        )
+        self.side_stack.addWidget(self.reference_panel)
+        workspace.addWidget(self.side_stack)
         layout.addLayout(workspace, 1)
 
         bottom = QHBoxLayout()
@@ -230,7 +240,6 @@ class AtelierView(QWidget):
 
     def _materials(self):
         pane = QFrame(objectName="card")
-        pane.setFixedWidth(258)
         contents = QVBoxLayout(pane)
         contents.setContentsMargins(19, 21, 19, 18)
         contents.setSpacing(13)
@@ -264,4 +273,9 @@ class AtelierView(QWidget):
         note.setWordWrap(True)
         contents.addWidget(note)
         return pane
+
+    def show_reference_panel(self, visible: bool = True) -> None:
+        self.side_stack.setCurrentWidget(
+            self.reference_panel if visible else self.side_stack.widget(0)
+        )
 

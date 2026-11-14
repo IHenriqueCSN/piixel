@@ -217,6 +217,8 @@ class EditorCommandBar(QWidget):
         self.grid_checkbox.toggled.connect(self.grid_action.setChecked)
         self.view_actions["grid"] = self.grid_action
         self.menus["view"].addAction(self.grid_action)
+        self.menus["view"].addSeparator()
+        self.menus["view"].addAction(self.commands["reference_panel"])
 
         zoom = self.menus["view"].addMenu("Zoom")
         for text, step in (("Diminuir", -25), ("100%", 0), ("Aumentar", 25)):

@@ -23,6 +23,7 @@ flowchart TD
     Session --> History["editor/history: comandos reversíveis"]
     History --> Model["model: grade de peças"]
     View --> Canvas["canvas: gestos e prévias"]
+    View --> Reference["reference: imagem transitória"]
     Atelier --> Files["format / png_export: arquivos"]
 ```
 
@@ -44,6 +45,7 @@ A identidade do documento é preservada durante redimensionamentos. Isso permite
 - `editor/new_design_dialog.py` contém o diálogo de novo design.
 - `ui/icons.py` e `ui/widgets.py` fornecem recursos visuais compartilhados, sem depender do Ateliê.
 - `theme.py` resolve a preferência clara, escura ou do sistema, atualiza a paleta e reaplica estilos registrados em tempo real. As cores da prancheta permanecem constantes e independentes do tema da interface.
+- `reference.py` carrega e valida imagens locais, além de apresentar zoom, movimento e rotação. A imagem pertence somente à sessão da interface; não faz parte do documento, do histórico ou das preferências.
 - `atelier.py` conecta a view, a sessão e os fluxos de interação, como diálogos de abrir, salvar, exportar e escolher cores. Ele mantém os acessos existentes a `design`, `file_path`, `history` e aos widgets usados pela interface e pelos testes.
 
 Os construtores de comandos anteriormente importados de `atelier.py` continuam disponíveis como adaptadores para a sessão. O código novo usa os comandos de `editor/history.py` diretamente; esses comandos não dependem do coordenador ou dos widgets.
@@ -85,6 +87,8 @@ O Piixelfone fica isolado em `piixelfone/`. `page.py` constrói a interface e en
 `supabase/piixelfone.sql` mantém tabelas em schema privado, com RLS e sem acesso direto por clientes. RPCs autorizam cada operação pelo JWT autenticado. O conteúdo cifrado permanece até o destinatário confirmar ou recusar; depois disso fica apenas o estado e o hash para preservar a idempotência. Números antigos ficam reservados permanentemente. O [guia de instalação](PIIXELFONE_SERVIDOR.md) descreve a implantação e as limitações criptográficas.
 
 `format.py` continua responsável pelo `.pii` versionado e pela gravação atômica.
+A imagem de referência não chega a essa camada: abrir, colar, girar ou remover a
+imagem não altera o documento nem marca o histórico como modificado.
 A versão 1 usa paleta RGB; a versão 2 acrescenta a bead transparente com uma
 entrada ARGB explícita. `None`, branco e transparente permanecem estados distintos
 no modelo. Designs sem transparência continuam sendo gravados como v1. O pequeno

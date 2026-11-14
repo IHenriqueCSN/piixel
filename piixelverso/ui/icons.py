@@ -100,6 +100,12 @@ def icon(kind: str, color=None) -> QIcon:
         p.drawEllipse(6, 7, 3, 3)
         p.drawLine(4, 17, 10, 11); p.drawLine(10, 11, 14, 15)
         p.drawLine(14, 15, 17, 12); p.drawLine(17, 12, 20, 15)
+    elif kind == "reference":
+        p.drawRoundedRect(3, 4, 18, 15, 2, 2)
+        p.drawEllipse(6, 7, 3, 3)
+        p.drawLine(4, 17, 10, 11); p.drawLine(10, 11, 14, 15)
+        p.drawLine(14, 15, 17, 12); p.drawLine(17, 12, 20, 15)
+        p.drawLine(8, 21, 16, 21)
     p.end()
     return QIcon(pixmap)
 

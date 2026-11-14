@@ -5,6 +5,7 @@ from html import escape
 from pathlib import Path
 
 from PySide6.QtCore import QRect, QTimer
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QMenu, QMessageBox, QVBoxLayout
 
 from .brand import app_icon, ensure_fonts
@@ -28,6 +29,7 @@ from .operations import replace_color_changes
 from .png_export import save_png
 from .preferences import PreferencesError, PreferencesStore
 from .replace import ReplaceColorDialog
+from .reference import REFERENCE_FILTER, load_reference_image, validate_reference_image
 from .resize import count_cropped_pixels, resized_design
 from .resize_dialog import ResizeCanvasDialog
 from .selection import (
@@ -81,6 +83,7 @@ class AtelierModule(ModulePage):
         self._custom_colors: list[str] = []
         self._recent_colors: list[str] = []
         self._selection_clipboard: SelectionPayload | None = None
+        self.reference_path: Path | None = None
         self._counts_timer = QTimer(self)
         self._counts_timer.setSingleShot(True)
         self._counts_timer.timeout.connect(self.refresh_counts)
@@ -127,6 +130,13 @@ class AtelierModule(ModulePage):
         self.view.color_picked.connect(self.pick_color)
         self.view.color_context_requested.connect(self._show_color_menu)
         self.view.recent_color_selected.connect(self.select_recent_color)
+        self.reference_panel.open_requested.connect(self.open_reference_image)
+        self.reference_panel.paste_requested.connect(self.paste_reference_image)
+        self.reference_panel.file_dropped.connect(self.load_reference_path)
+        self.reference_panel.image_dropped.connect(
+            lambda image: self.set_reference_image(image, "Imagem arrastada")
+        )
+        self.reference_panel.removed.connect(self.remove_reference_image)
         self.canvas.changed.connect(self._canvas_changed)
         self.canvas.stroke_finished.connect(self._commit_stroke)
         self.canvas.color_picked.connect(self.pick_color)
@@ -151,6 +161,7 @@ class AtelierModule(ModulePage):
                 "paste": self.paste_selection,
                 "replace_color": self.show_replace_color_dialog,
                 "custom_color": self.custom_color,
+                "reference_panel": self.show_reference_panel,
                 "fit": self.fit_canvas,
             },
             select_tool=self.select_tool,
@@ -189,6 +200,65 @@ class AtelierModule(ModulePage):
         self.display_mode_combo.currentIndexChanged.connect(self.change_display_mode)
         self.command_bar.grid_checkbox.toggled.connect(self.toggle_grid)
         self.zoom.valueChanged.connect(self.set_zoom)
+
+    def show_reference_panel(self) -> None:
+        self.view.show_reference_panel(True)
+
+    def open_reference_image(self) -> bool:
+        self.show_reference_panel()
+        path, _selected_filter = QFileDialog.getOpenFileName(
+            self, "Abrir imagem de referência", "", REFERENCE_FILTER
+        )
+        return self.load_reference_path(path) if path else False
+
+    def load_reference_path(self, path: str | Path) -> bool:
+        if not path:
+            return False
+        try:
+            image = load_reference_image(path)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(
+                self, "Não foi possível abrir a referência", str(error)
+            )
+            return False
+        source = Path(path).expanduser().absolute()
+        return self.set_reference_image(image, source.name, path=source)
+
+    def set_reference_image(self, image: QImage, source: str,
+                            *, path: Path | None = None) -> bool:
+        try:
+            reference = validate_reference_image(image)
+        except ValueError as error:
+            QMessageBox.warning(
+                self, "Não foi possível abrir a referência", str(error)
+            )
+            return False
+        self.reference_path = Path(path) if path is not None else None
+        self.reference_panel.set_image(reference, str(source))
+        self.show_reference_panel()
+        return True
+
+    def paste_reference_image(self) -> bool:
+        clipboard = QApplication.clipboard()
+        mime = clipboard.mimeData()
+        if mime.hasImage():
+            payload = mime.imageData()
+            image = payload.toImage() if isinstance(payload, QPixmap) else payload
+            if isinstance(image, QImage) and not image.isNull():
+                return self.set_reference_image(image, "Imagem colada")
+        if mime.hasUrls():
+            local = next((url.toLocalFile() for url in mime.urls() if url.isLocalFile()), "")
+            if local:
+                return self.load_reference_path(local)
+        QMessageBox.information(
+            self, "Nenhuma imagem para colar",
+            "Copie uma imagem ou um arquivo de imagem e tente novamente.",
+        )
+        return False
+
+    def remove_reference_image(self) -> None:
+        self.reference_path = None
+        self.reference_panel.clear_image()
 
     def select_tool(self, tool):
         self.canvas.finish_stroke()

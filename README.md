@@ -41,6 +41,7 @@ No Piixelfone, ações como abrir conversas, enviar mensagens ou arquivos e rege
 - Exportação de PNG em quadradinhos ou rosquinhas, com grade opcional e medidas em milímetros.
 - Configuração persistente do tamanho de cada peça, com padrão de 5 mm.
 - Aparência clara, escura ou sincronizada com o sistema, sem alterar as cores da prancheta.
+- Painel de imagem de referência com zoom, movimento e rotação, separado do arquivo `.pii`.
 
 A contagem é a base para controlar materiais e calcular preços. Esta versão ainda não mantém um cadastro de estoque, custos, margens ou preços de venda.
 
@@ -193,6 +194,24 @@ O diálogo mostra quantas peças seriam cortadas. Se houver peças fora dos novo
 
 Salve o `.pii` para conservar as novas dimensões entre sessões. Designs antigos menores que 10 células continuam abrindo normalmente e podem ser ampliados pelo mesmo comando.
 
+## Usar uma imagem de referência
+
+No Ateliê, use **Exibir → Imagem de referência** ou **Ctrl+Shift+R**. O painel
+aparece na coluna da direita, no lugar da contagem de materiais, sem diminuir a
+prancheta. Use **← Contagem** para voltar aos números; a imagem permanece pronta
+para quando o painel for aberto novamente.
+
+Clique em **Abrir imagem…** para escolher PNG, JPEG ou WebP. Também é possível
+colar uma imagem copiada com **Colar** ou arrastar uma imagem ou arquivo para o
+painel. A roda do mouse amplia e reduz; arraste a imagem ampliada para se mover.
+Os controles inferiores permitem ajustar a imagem ao espaço e girá-la em passos
+de 90 graus.
+
+A referência existe somente durante a sessão atual. Ela não é incorporada ao
+`.pii`, não altera o histórico de desenho e não acompanha o arquivo ao ser enviado
+para outra pessoa. Fechar o Piixel descarta a referência; o arquivo original da
+imagem permanece intacto no local em que foi aberto.
+
 ## Exportar como PNG
 
 No Ateliê, use **Arquivo → Exportar como PNG…** ou **Ctrl+Shift+E**. Escolha **Quadradinhos** ou **Rosquinhas (hama beads)** e marque **Mostrar grade** se quiser incluir as linhas. A prévia mostra o resultado antes de gravar a imagem; essas escolhas valem para a exportação e preservam a visualização atual do editor.
@@ -269,7 +288,7 @@ A barra compacta no topo reúne menus tradicionais e ícones das ferramentas mai
 
 - **Arquivo**: novo design, abrir, salvar, salvar como, exportar PNG, tela inicial e Configurações.
 - **Editar**: desfazer/refazer, copiar/recortar/colar, redimensionar prancheta, seleção, lápis, balde de tinta, borracha, conta-gotas, formas geométricas, substituir cor e cor personalizada.
-- **Exibir**: formato das peças, grade, zoom e ajustar à janela.
+- **Exibir**: formato das peças, grade, imagem de referência, zoom e ajustar à janela.
 
 Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto você desenha, sem precisar abrir os menus. No Windows e Linux:
 
@@ -298,6 +317,7 @@ Os atalhos aparecem nos menus e nas dicas ao passar o mouse. Funcionam enquanto 
 | Elipse | O |
 | Cancelar forma ou limpar seleção | Esc |
 | Substituir cor em todo o desenho | Ctrl+H |
+| Mostrar imagem de referência | Ctrl+Shift+R |
 | Menu Arquivo | Alt+A |
 | Menu Editar | Alt+E |
 | Menu Exibir | Alt+X |

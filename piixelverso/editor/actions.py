@@ -44,6 +44,7 @@ COMMANDS = (
     CommandDefinition("shape_fill", "Preencher formas", "shape_fill"),
     CommandDefinition("replace_color", "Substituir cor…", "replace_color", "Ctrl+H"),
     CommandDefinition("custom_color", "Cor personalizada", "palette"),
+    CommandDefinition("reference_panel", "Imagem de referência", "reference", "Ctrl+Shift+R"),
     CommandDefinition("fit", "Ajustar à janela", "fit"),
 )
 
